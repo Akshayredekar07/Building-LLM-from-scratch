@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building LLMs — Complete Deep Dive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0ece3;--bg2:#e6e1d7;--bg3:#d8d3c8;
+  --text:#16110b;--muted:#6a5e4e;
+  --accent:#bf3a1e;--accent2:#d97706;--accent3:#1e5abf;
+  --border:#c4bbb0;--highlight:#fdf0d0;
+  --dark:#16110b;--dark2:#2a221a;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:16px;line-height:1.72}
+
+/* PROGRESS */
+#prog{position:fixed;top:0;left:0;height:3px;background:var(--accent);z-index:200;transition:width .1s;pointer-events:none}
+
+/* NAV */
+nav{
+  position:fixed;top:3px;left:0;right:0;background:var(--bg);
+  border-bottom:1px solid var(--border);z-index:100;
+  display:flex;align-items:center;padding:0 1.5rem;height:50px;gap:4px;overflow-x:auto;
+}
+nav::-webkit-scrollbar{display:none}
+.nav-brand{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:3px;color:var(--text);margin-right:1.5rem;white-space:nowrap;flex-shrink:0}
+nav a{
+  font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);
+  text-decoration:none;white-space:nowrap;padding:4px 9px;border-radius:2px;
+  transition:all .18s;letter-spacing:.5px;border:1px solid transparent;flex-shrink:0
+}
+nav a:hover,nav a.active{color:var(--accent);background:var(--highlight);border-color:var(--accent)}
+
+/* HERO */
+.hero{
+  padding:5.5rem 4rem 4rem;border-bottom:2px solid var(--text);
+  display:grid;grid-template-columns:1.1fr 0.9fr;gap:3rem;align-items:end;
+  max-width:1100px;margin:53px auto 0;
+}
+.hero h1{
+  font-family:'Bebas Neue',sans-serif;font-size:clamp(2.8rem,5.5vw,5rem);
+  line-height:.92;letter-spacing:3px;
+}
+.hero h1 span{color:var(--accent)}
+.hero-right{padding-bottom:.5rem}
+.hero p{
+  font-family:'DM Serif Display',serif;font-style:italic;
+  font-size:1.18rem;color:var(--muted);line-height:1.6;margin-bottom:1.5rem
+}
+.hero-meta{
+  font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);
+  border-top:1px solid var(--border);padding-top:1rem;line-height:1.8
+}
+.hero-meta b{color:var(--text)}
+
+/* SECTION WRAPPER */
+.sec{
+  padding:3.5rem 4rem;border-bottom:1px solid var(--border);
+  max-width:1100px;margin:0 auto;
+}
+.sec-tag{
+  font-family:'JetBrains Mono',monospace;font-size:10.5px;
+  color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-bottom:.8rem
+}
+h2{
+  font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,5vw,3.2rem);
+  letter-spacing:1.5px;margin-bottom:1.4rem;line-height:1
+}
+h3{font-family:'DM Serif Display',serif;font-size:1.35rem;margin:2rem 0 .8rem;color:var(--text)}
+p{margin-bottom:1rem}
+strong{font-weight:600}
+
+/* HIGHLIGHT */
+.hl{
+  background:var(--highlight);border-left:3px solid var(--accent2);
+  padding:.9rem 1.3rem;margin:1rem 0;border-radius:0 3px 3px 0
+}
+.hl.info{border-left-color:var(--accent3);background:#e8edf9}
+
+/* CALLOUT */
+.callout{
+  border:1.5px solid var(--text);padding:1.4rem;margin:1.8rem 0;position:relative
+}
+.callout::before{
+  content:attr(data-label);position:absolute;top:-10px;left:1rem;
+  background:var(--bg);padding:0 .5rem;
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--accent)
+}
+
+/* CARDS */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.2rem;margin:1.5rem 0}
+.card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-top:3px solid var(--accent);padding:1.4rem;border-radius:0 0 3px 3px
+}
+.card h4{
+  font-family:'JetBrains Mono',monospace;font-size:10.5px;
+  letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:.8rem
+}
+.card p{font-size:.9rem;color:var(--muted);margin:0}
+
+/* INTERACTIVE BOX */
+.ibox{background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:1.8rem;margin:1.5rem 0}
+.ibox-title{
+  font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--muted);margin-bottom:1.2rem;
+  border-bottom:1px solid var(--border);padding-bottom:.6rem
+}
+
+/* BUTTONS */
+.btn{
+  background:var(--dark);color:var(--bg);border:none;padding:.45rem 1.1rem;
+  font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;
+  border-radius:2px;transition:all .18s;letter-spacing:.5px
+}
+.btn:hover{background:var(--accent)}
+.btn.on{background:var(--accent)}
+.btn.sec{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn.sec:hover{background:var(--dark);color:var(--bg)}
+.btn-row{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem;align-items:center}
+
+/* STEPS */
+.step{display:none;animation:fadeUp .3s ease}
+.step.on{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.step-ctrl{display:flex;gap:.8rem;align-items:center;margin-top:1.2rem}
+.step-idx{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+
+/* TABLES */
+table{width:100%;border-collapse:collapse;margin:1.4rem 0;font-family:'JetBrains Mono',monospace;font-size:13px}
+th{background:var(--dark);color:var(--bg);padding:.55rem 1rem;text-align:left;font-weight:500;letter-spacing:.5px}
+td{padding:.55rem 1rem;border-bottom:1px solid var(--border);vertical-align:top}
+tr:nth-child(even) td{background:var(--bg2)}
+
+/* TABS */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1.2rem}
+.tab{
+  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.5px;
+  padding:.5rem 1.2rem;background:none;border:none;color:var(--muted);cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s
+}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:500}
+.tab-panel{display:none}.tab-panel.on{display:block}
+
+/* PIPELINE DIAGRAM */
+.pipeline{display:flex;align-items:center;gap:0;margin:1.5rem 0;flex-wrap:wrap}
+.pipe-box{
+  background:var(--dark);color:var(--bg);padding:.7rem 1.2rem;
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:.5px;
+  border-radius:3px;text-align:center;flex:1;min-width:100px
+}
+.pipe-box.accent{background:var(--accent)}
+.pipe-box.blue{background:var(--accent3)}
+.pipe-arrow{
+  font-size:1.2rem;color:var(--muted);padding:0 .4rem;flex-shrink:0
+}
+.pipe-num{
+  font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent2);
+  display:block;margin-bottom:3px;letter-spacing:1px
+}
+
+/* STAGE BOXES */
+.stage-wrap{margin:1.5rem 0}
+.stage-label{
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--muted);margin-bottom:.6rem
+}
+.stage-row{display:flex;align-items:stretch;gap:.8rem;margin-bottom:1rem;flex-wrap:wrap}
+.stage-box{
+  background:var(--bg2);border:1px solid var(--border);
+  border-left:3px solid var(--accent);padding:.8rem 1.1rem;flex:1;min-width:120px;
+  font-family:'JetBrains Mono',monospace;font-size:12px
+}
+.stage-box.blue{border-left-color:var(--accent3)}
+.stage-box.amber{border-left-color:var(--accent2)}
+.stage-result{
+  background:var(--dark);color:var(--bg);padding:.7rem 1.5rem;
+  font-family:'JetBrains Mono',monospace;font-size:12px;
+  border-radius:3px;text-align:center;margin-top:.4rem
+}
+
+/* INLINE CODE */
+code{
+  font-family:'JetBrains Mono',monospace;font-size:12.5px;
+  background:var(--bg2);padding:2px 6px;border-radius:2px;color:var(--accent3)
+}
+
+/* LIST */
+ul.slist{padding-left:1.4rem;margin-bottom:1rem}
+ul.slist li{margin-bottom:.6rem;padding-left:.4rem}
+ul.slist li::marker{color:var(--accent)}
+ol.slist{padding-left:1.4rem;margin-bottom:1rem}
+ol.slist li{margin-bottom:.7rem;padding-left:.4rem}
+ol.slist li::marker{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:600}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .45s ease,transform .45s ease}
+.reveal.vis{opacity:1;transform:translateY(0)}
+
+/* SHOT EXAMPLE */
+.shot-example{
+  background:var(--dark2);border:1px solid #3a3330;border-radius:3px;
+  padding:1rem 1.4rem;margin:.8rem 0;font-family:'JetBrains Mono',monospace;font-size:12.5px;
+  color:#f0ece3;line-height:1.8
+}
+.shot-label{font-size:10px;color:var(--accent2);letter-spacing:2px;text-transform:uppercase;margin-bottom:.5rem}
+.shot-line{color:#a89880}
+.shot-answer{color:#7ec98f}
+
+@media(max-width:768px){
+  .hero{grid-template-columns:1fr;padding:4rem 1.5rem 2rem;gap:2rem}
+  .sec{padding:2rem 1.5rem}
+  .pipeline{flex-direction:column;align-items:stretch}
+  .pipe-arrow{transform:rotate(90deg);text-align:center}
+  nav{padding:0 .8rem}
+}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-brand">LLM</span>
+  <a href="#what">01 What</a>
+  <a href="#why">02 Why</a>
+  <a href="#ecosystem">03 Ecosystem</a>
+  <a href="#stages">04 Stages</a>
+  <a href="#datasets">05 Datasets</a>
+  <a href="#pretraining">06 Pretraining</a>
+  <a href="#finetuning">07 Finetuning</a>
+  <a href="#transformer">08 Transformer</a>
+  <a href="#attention">09 Attention</a>
+  <a href="#bert-gpt">10 BERT vs GPT</a>
+  <a href="#gpt-deep">11 GPT Deep Dive</a>
+  <a href="#emergent">12 Emergent</a>
+  <a href="#build-stages">13 Build Pipeline</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div>
+    <h1>BUILDING<br>LARGE<br><span>LANG</span><br>UAGE<br>MODELS</h1>
+  </div>
+  <div class="hero-right reveal">
+    <p>From what an LLM is to how GPT-3 was built — transformer architecture, attention, pretraining, finetuning, zero-shot learning, and emergent behaviour. Every concept from scratch.</p>
+    <div class="hero-meta">
+      <b>Sections:</b> 13 &nbsp;|&nbsp; <b>Coverage:</b> GPT-1/2/3, BERT, Transformer, Attention &nbsp;|&nbsp; <b>Interactive:</b> Step walkthroughs
+    </div>
+  </div>
+</div>
+
+<!-- ─── 1. WHAT IS LLM ─── -->
+<section class="sec reveal" id="what">
+  <div class="sec-tag">01 — Definition</div>
+  <h2>WHAT IS AN LLM?</h2>
+  <p>A <strong>Large Language Model</strong> is a deep neural network designed to understand and generate human-like text. It is trained on a massive amount of text data.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>Neural Network</h4>
+      <p>Deep neural network at its core — not a rule-based system. Learns patterns from data rather than being explicitly programmed.</p>
+    </div>
+    <div class="card">
+      <h4>Human-like Text</h4>
+      <p>Responds to human-like text and generates text. The input and output are both natural language.</p>
+    </div>
+    <div class="card">
+      <h4>Massive Training Data</h4>
+      <p>Trained on enormous amounts of text data — web crawls, books, Wikipedia, code, and more. Scale is the key ingredient.</p>
+    </div>
+  </div>
+
+  <h3>How Model Size Grew</h3>
+  <table>
+    <thead><tr><th>Model</th><th>Year</th><th>Parameters</th><th>Context / Tokens</th></tr></thead>
+    <tbody>
+      <tr><td>GPT-1</td><td>2018</td><td>117 M</td><td>512 tokens</td></tr>
+      <tr><td>GPT-2</td><td>2019</td><td>1.5 B</td><td>1024 tokens</td></tr>
+      <tr><td>GPT-3</td><td>2020</td><td>175 B</td><td>2048 tokens</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─── 2. WHY LLMs ─── -->
+<section class="sec reveal" id="why">
+  <div class="sec-tag">02 — Motivation</div>
+  <h2>WHY LARGE LANGUAGE MODELS?</h2>
+  <p>Models have <strong>billions of parameters</strong> — this gives them the capacity to learn complex patterns across the full range of human language.</p>
+
+  <div class="hl">LLMs are capable of a wide range of NLP tasks — question answering, sentiment analysis, text generation, machine translation, summarization, and much more.</div>
+
+  <h3>LLM vs Earlier NLP Models</h3>
+  <table>
+    <thead><tr><th>Aspect</th><th>Earlier NLP Models</th><th>LLMs</th></tr></thead>
+    <tbody>
+      <tr><td>Task scope</td><td>Designed for one specific task</td><td>Can perform wide range of NLP tasks</td></tr>
+      <tr><td>Instruction following</td><td>Cannot write an email from a custom instruction</td><td>A task like writing an email from a prompt is trivial</td></tr>
+      <tr><td>Approach</td><td>Task-specific, narrow</td><td>General-purpose language understanding</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─── 3. ECOSYSTEM ─── -->
+<section class="sec reveal" id="ecosystem">
+  <div class="sec-tag">03 — Ecosystem</div>
+  <h2>AI ECOSYSTEM</h2>
+  <p>LLMs sit inside a hierarchy of increasingly specific fields:</p>
+
+  <div class="ibox">
+    <div class="ibox-title">Nesting — From AI to LLM</div>
+    <div style="display:flex;flex-direction:column;gap:.6rem;padding:.5rem 0">
+      <div style="background:#f0ece3;border:2px solid var(--border);border-radius:3px;padding:1rem 1.5rem;text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)">
+        Artificial Intelligence
+        <div style="margin-top:.6rem;background:var(--bg2);border:1.5px solid var(--border);border-radius:3px;padding:.8rem 1.2rem">
+          Machine Learning
+          <div style="margin-top:.6rem;background:var(--bg3);border:1.5px solid var(--border);border-radius:3px;padding:.7rem 1rem">
+            Deep Learning
+            <div style="margin-top:.5rem;background:var(--dark);color:var(--bg);border-radius:3px;padding:.6rem 1rem;font-weight:500;letter-spacing:1px">
+              LLMs
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Generative AI</h3>
+  <p><strong>Generative AI = LLM + Deep Learning.</strong> It uses deep neural networks to create new content — text, images, various formats of media.</p>
+  <p>LLMs represent the specific application of deep learning techniques, leveraging their ability to process and generate human-like text.</p>
+
+  <h3>Applications of LLMs</h3>
+  <div class="card-grid">
+    <div class="card">
+      <h4>Chatbots / Virtual Assistants</h4>
+      <p>Conversational AI, customer support, personal assistants. The most widely deployed use case.</p>
+    </div>
+    <div class="card">
+      <h4>Machine Translation</h4>
+      <p>Translating between languages with contextual understanding — far superior to rule-based systems.</p>
+    </div>
+    <div class="card">
+      <h4>Novel Text Generation</h4>
+      <p>Creative writing, story generation, content drafting.</p>
+    </div>
+    <div class="card">
+      <h4>Content Creation</h4>
+      <p>Blog posts, marketing copy, reports, emails.</p>
+    </div>
+    <div class="card">
+      <h4>Sentiment Analysis</h4>
+      <p>Understanding tone, emotion, and opinion in text at scale.</p>
+    </div>
+    <div class="card">
+      <h4>And Many More</h4>
+      <p>Code generation, summarization, question answering, named entity recognition. Sky is the limit.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── 4. STAGES OF BUILDING ─── -->
+<section class="sec reveal" id="stages">
+  <div class="sec-tag">04 — High-Level Stages</div>
+  <h2>STAGES OF BUILDING LLMs</h2>
+  <div class="hl">Creating an LLM = <strong>Pretraining + Finetuning</strong></div>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>① Pretraining</h4>
+      <p>Train on large and diverse dataset. Goal is to acquire basic language understanding and general capabilities. This produces the <em>foundation model</em>.</p>
+    </div>
+    <div class="card">
+      <h4>② Finetuning</h4>
+      <p>Refinement by training on a narrower dataset specific to a particular task. Goal: make the LLM task-specific and more accurate in the selected domain.</p>
+    </div>
+  </div>
+
+  <h3>Three-Stage Build Pipeline</h3>
+
+  <div class="stage-wrap">
+    <div class="stage-label">Stage 1 — Building the LLM</div>
+    <div class="stage-row">
+      <div class="stage-box"><span style="font-size:9px;color:var(--accent2);letter-spacing:1px;display:block;margin-bottom:3px">①</span>Data Preparation & Sampling</div>
+      <div class="stage-box blue"><span style="font-size:9px;color:var(--accent2);letter-spacing:1px;display:block;margin-bottom:3px">②</span>Attention Mechanism</div>
+      <div class="stage-box"><span style="font-size:9px;color:var(--accent2);letter-spacing:1px;display:block;margin-bottom:3px">③</span>LLM Architecture</div>
+      <div class="stage-box amber"><span style="font-size:9px;color:var(--accent2);letter-spacing:1px;display:block;margin-bottom:3px">④</span>Pretraining</div>
+    </div>
+    <div class="stage-result">↓ Building an LLM</div>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="stage-label">Stage 2 — Foundation Model</div>
+    <div class="stage-row">
+      <div class="stage-box"><span style="font-size:9px;color:var(--accent2);letter-spacing:1px;display:block;margin-bottom:3px">⑤</span>Training Loop</div>
+      <div class="stage-box blue"><span style="font-size:9px;color:var(--accent2);letter-spacing:1px;display:block;margin-bottom:3px">⑥</span>Model Evaluation</div>
+      <div class="stage-box"><span style="font-size:9px;color:var(--accent2);letter-spacing:1px;display:block;margin-bottom:3px">⑦</span>Load Pretrained Weights</div>
+    </div>
+    <div class="stage-result">↓ Foundation Model</div>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="stage-label">Stage 3 — Finetuning (two paths)</div>
+    <div class="stage-row">
+      <div class="stage-box amber">
+        <span style="font-size:9px;color:var(--accent2);letter-spacing:1px;display:block;margin-bottom:3px">⑧ PATH A</span>
+        Finetuning → Classifier<br>
+        <span style="font-size:11px;color:var(--muted)">Dataset with class labels</span>
+      </div>
+      <div class="stage-box blue">
+        <span style="font-size:9px;color:var(--accent2);letter-spacing:1px;display:block;margin-bottom:3px">⑨ PATH B</span>
+        Finetuning → Personal Assistant<br>
+        <span style="font-size:11px;color:var(--muted)">Instruction dataset</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── 5. DATASETS ─── -->
+<section class="sec reveal" id="datasets">
+  <div class="sec-tag">05 — Training Data</div>
+  <h2>DATASETS USED FOR GPT-3</h2>
+  <p>GPT-3 was trained on a massive mix of internet and book data. The token counts reveal the scale:</p>
+
+  <table>
+    <thead><tr><th>Dataset</th><th>Share</th><th>Source</th><th>Tokens</th></tr></thead>
+    <tbody>
+      <tr><td>CommonCrawl (Filtered)</td><td>60%</td><td>Web crawl data</td><td>410 billion</td></tr>
+      <tr><td>WebText2</td><td>22%</td><td>Web crawl data</td><td>19 billion</td></tr>
+      <tr><td>Books1</td><td>8%</td><td>Internet-based book corpus</td><td>12 billion</td></tr>
+      <tr><td>Books2</td><td>8%</td><td>Internet-based book corpus</td><td>55 billion</td></tr>
+      <tr><td>Wikipedia</td><td>3%</td><td>High quality encyclopedic text</td><td>3 billion</td></tr>
+    </tbody>
+  </table>
+
+  <div class="hl info">Total pretraining cost for GPT-3 is estimated at several hundred million tokens processed. Wikipedia, despite high quality, is only 3% — quantity dominates quality at this scale.</div>
+</section>
+
+<!-- ─── 6. PRETRAINING ─── -->
+<section class="sec reveal" id="pretraining">
+  <div class="sec-tag">06 — Pretraining Phase</div>
+  <h2>PRETRAINING</h2>
+  <p>Pretraining is <strong>unsupervised learning</strong> — the model is first trained on unlabelled data to learn general patterns. After this it is finetuned on supervised data for specific tasks.</p>
+
+  <div class="callout" data-label="Key Insight">
+    The model learns general patterns from raw text without any labelling. This is what gives LLMs their broad capabilities — they absorb the structure of language itself.
+  </div>
+
+  <h3>What Pretraining Produces</h3>
+  <p>The result is a <strong>Pretrained (Foundational) LLM</strong> — also called a base model or foundation model. It is:</p>
+  <ul class="slist">
+    <li>Trained on unlabelled text (raw billions of words)</li>
+    <li>Not yet trained on labelled data</li>
+    <li>Capable of basic language understanding — predicting next word or filling missing tokens</li>
+  </ul>
+
+  <h3>Pretraining Phase — What Happens</h3>
+  <div class="ibox">
+    <div class="ibox-title">Pretraining Step-by-Step</div>
+    <div class="step on" id="pt-step-1">
+      <div class="hl"><strong>Step 1 — Initialize Architecture</strong></div>
+      <p>Build the LLM architecture (e.g. transformer-based). Define number of layers, attention heads, embedding dimensions, context window.</p>
+    </div>
+    <div class="step" id="pt-step-2">
+      <div class="hl"><strong>Step 2 — Feed Raw Text</strong></div>
+      <p>Feed billions of tokens from CommonCrawl, books, Wikipedia into the model. No labels — just raw text.</p>
+    </div>
+    <div class="step" id="pt-step-3">
+      <div class="hl"><strong>Step 3 — Next Token Prediction</strong></div>
+      <p>The model predicts the next word/token at every step. For GPT-3 this means predicting the next token given the previous 2048 tokens. The loss is cross-entropy between predicted and actual next token.</p>
+    </div>
+    <div class="step" id="pt-step-4">
+      <div class="hl"><strong>Step 4 — Foundation Model</strong></div>
+      <p>After training on 300+ billion tokens, the model has internalised grammar, facts, reasoning patterns, and world knowledge. This is the foundation model — ready for finetuning.</p>
+    </div>
+    <div class="step-ctrl">
+      <button class="btn sec" onclick="stepNav('pt',1,4,-1)">← Prev</button>
+      <button class="btn" onclick="stepNav('pt',1,4,1)">Next →</button>
+      <span class="step-idx" id="pt-idx">Step 1 of 4</span>
+    </div>
+  </div>
+
+  <h3>Two Types of Pretrained LLMs</h3>
+  <table>
+    <thead><tr><th>Type</th><th>How Trained</th><th>Output</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Masked LM (BERT-style)</strong></td><td>Predict masked tokens in a sentence; sees context from both sides</td><td>Understanding / classification tasks</td></tr>
+      <tr><td><strong>Causal LM (GPT-style)</strong></td><td>Predict next token; sees only previous context</td><td>Text generation, completion</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─── 7. FINETUNING ─── -->
+<section class="sec reveal" id="finetuning">
+  <div class="sec-tag">07 — Finetuning Phase</div>
+  <h2>FINETUNING</h2>
+  <p>Finetuning takes the pretrained foundation model and refines it on a <strong>narrower, labelled dataset</strong> specific to a particular task or domain.</p>
+
+  <div class="tabs">
+    <button class="tab on" onclick="switchTab('ft','classification',this)">Classification</button>
+    <button class="tab" onclick="switchTab('ft','instruction',this)">Instruction</button>
+    <button class="tab" onclick="switchTab('ft','domain',this)">Domain</button>
+  </div>
+
+  <div class="tab-panel on" id="ft-classification">
+    <h3>Finetuning on Labelled Dataset (Classification)</h3>
+    <p>The pretrained LLM is finetuned on a labelled dataset for classification tasks:</p>
+    <ul class="slist">
+      <li><strong>Classification</strong> — text classification, sentiment analysis, NER</li>
+      <li><strong>Text Generation</strong> — constrained generation for specific domains</li>
+      <li><strong>Summarization</strong> — document summarization with reference summaries</li>
+      <li><strong>Personal assistant</strong> — question answering, sentiment analysis</li>
+    </ul>
+    <p>Input: labelled pairs (text, label). Output: a classifier built on top of the LLM backbone.</p>
+  </div>
+
+  <div class="tab-panel" id="ft-instruction">
+    <h3>Instruction Finetuning</h3>
+    <p>The model is finetuned on an <strong>instruction dataset</strong> — pairs of (instruction, desired response). This is how models like ChatGPT are created from a base GPT model.</p>
+    <p>Teaches the model to follow instructions, not just complete text. The resulting model is sometimes called an "instruction-tuned" model or a personal assistant model.</p>
+    <div class="hl">Instructional finetuning → (Global dataset with task pairs, desired answers) → Model that follows instructions</div>
+  </div>
+
+  <div class="tab-panel" id="ft-domain">
+    <h3>Domain-Specific Finetuning</h3>
+    <p>Finetune on domain data to improve accuracy in a selected domain — medical, legal, code, financial.</p>
+    <ul class="slist">
+      <li>Finetuned on admin notes → <strong>Question answering / Q&A generation</strong></li>
+      <li>Finetuned on domain data → <strong>Summarization / Sentiment Analyst</strong></li>
+      <li>Finetuned on user-specific data → <strong>Personalized Agent</strong></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─── 8. TRANSFORMER ─── -->
+<section class="sec reveal" id="transformer">
+  <div class="sec-tag">08 — Architecture</div>
+  <h2>TRANSFORMER ARCHITECTURE</h2>
+  <p>What makes LLMs so powerful? The <strong>Transformer architecture</strong>. Most modern LLMs are based on it.</p>
+  <p>This architecture comes from the paper <em>"Attention is All You Need"</em> by Google in 2017. It replaced traditional RNN/CNN-based NLP models.</p>
+
+  <div class="hl info">Attention is key — it allows the model to focus on relevant parts of the input sequence based on their importance relative to others, regardless of position.</div>
+
+  <h3>Simplified Transformer Pipeline</h3>
+  <div class="pipeline">
+    <div class="pipe-box"><span class="pipe-num">①</span>Input Text</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box"><span class="pipe-num">②</span>Preprocessing Step</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box accent"><span class="pipe-num">③</span>Embeddings</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue"><span class="pipe-num">④</span>Encoder</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue"><span class="pipe-num">⑤</span>Decoder</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box"><span class="pipe-num">⑥</span>Output Layer</div>
+  </div>
+
+  <div class="card-grid" style="margin-top:1.5rem">
+    <div class="card">
+      <h4>Encoder</h4>
+      <p>Converts input text into vector representations. Captures context from the full input sequence. Used in BERT-style models.</p>
+    </div>
+    <div class="card">
+      <h4>Decoder</h4>
+      <p>Generates output text word by word. Used in GPT-style models. At each step it produces one word at a time.</p>
+    </div>
+    <div class="card">
+      <h4>Embeddings</h4>
+      <p>Maps tokens to dense vector representations. The model operates entirely in this vector space — not on raw text.</p>
+    </div>
+  </div>
+
+  <h3>Encoder–Decoder vs Encoder-Only vs Decoder-Only</h3>
+  <table>
+    <thead><tr><th>Architecture</th><th>Example</th><th>Used For</th></tr></thead>
+    <tbody>
+      <tr><td>Encoder + Decoder</td><td>Original Transformer (2017)</td><td>Translation, summarization</td></tr>
+      <tr><td>Encoder only</td><td>BERT</td><td>Classification, understanding tasks</td></tr>
+      <tr><td>Decoder only</td><td>GPT series</td><td>Text generation, completion</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout" data-label="Note">
+    This "reduced" transformer architecture — where GPT uses only the decoder block — is simpler. All you need to provide is <em>"parse one word at a time"</em> and the model completes the next token. Output is one word at a time.
+  </div>
+</section>
+
+<!-- ─── 9. ATTENTION ─── -->
+<section class="sec reveal" id="attention">
+  <div class="sec-tag">09 — Attention Mechanism</div>
+  <h2>ATTENTION MECHANISM</h2>
+  <p>Attention allows the model to assign <strong>weights to different tokens</strong> in the input based on their importance relative to others.</p>
+
+  <div class="hl">Attention helps the model to focus on relevant parts of the sentence and capture long-range dependencies.</div>
+
+  <h3>Why Attention Matters</h3>
+  <p>In <code>The lion roams in the jungle</code> — to predict the next word, the model needs to know that "lion" is the subject. Attention lets the model assign high weight to "lion" even if it is far back in the sequence.</p>
+
+  <div class="ibox">
+    <div class="ibox-title">Attention — Intuition</div>
+    <p style="font-size:.9rem;color:var(--muted);margin-bottom:1rem">When processing any token, attention looks at every other token in the context and scores how relevant each one is. High-scoring tokens get more influence on the current token's representation.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.8rem;margin-top:1rem">
+      <div style="background:var(--dark);color:var(--bg);padding:1rem;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:12px">
+        <div style="color:var(--accent2);margin-bottom:.4rem;font-size:10px;letter-spacing:1px">QUERY</div>
+        Current token asking: "what is relevant to me?"
+      </div>
+      <div style="background:var(--dark);color:var(--bg);padding:1rem;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:12px">
+        <div style="color:var(--accent2);margin-bottom:.4rem;font-size:10px;letter-spacing:1px">KEY</div>
+        Every token broadcasting: "here is what I represent"
+      </div>
+      <div style="background:var(--dark);color:var(--bg);padding:1rem;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:12px">
+        <div style="color:var(--accent2);margin-bottom:.4rem;font-size:10px;letter-spacing:1px">VALUE</div>
+        Actual content weighted by attention scores
+      </div>
+    </div>
+  </div>
+
+  <p>Attention is also key to <strong>positional awareness</strong> — the model learns how tokens relate to each other based on their position in the input sequence.</p>
+</section>
+
+<!-- ─── 10. BERT vs GPT ─── -->
+<section class="sec reveal" id="bert-gpt">
+  <div class="sec-tag">10 — Model Variants</div>
+  <h2>BERT vs GPT</h2>
+  <p>Both are LLMs built on the Transformer. They differ in which part of the transformer they use and how they are trained.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>BERT — Bidirectional Encoder</h4>
+      <p><strong>Encoder-only</strong> transformer. Uses encoder only, learns from context in both directions. Trained on masked language modeling — predict masked tokens. Excellent for classification, NER, question answering.</p>
+    </div>
+    <div class="card">
+      <h4>GPT — Generative Pretrained Transformer</h4>
+      <p><strong>Decoder-only</strong> transformer. Uses decoder only, reads only left-to-right context. Generative pretrained transformer — predicts the next token. Excellent for text generation and completion.</p>
+    </div>
+  </div>
+
+  <h3>BERT — Encoder Only</h3>
+  <div class="pipeline">
+    <div class="pipe-box"><span class="pipe-num">Input</span>Input Text</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box"><span class="pipe-num">Step</span>Preprocessing</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue"><span class="pipe-num">Only</span>Encoder</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box accent"><span class="pipe-num">Task</span>Classify / Fill Mask</div>
+  </div>
+  <p style="font-size:.9rem;color:var(--muted)">BERT is encoder only. This is an example of how LLM can perform — "This is an [MASK] of how..."</p>
+
+  <h3>GPT — Decoder Only</h3>
+  <div class="pipeline">
+    <div class="pipe-box"><span class="pipe-num">Input</span>Input Text</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box"><span class="pipe-num">Step</span>Preprocessing</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue"><span class="pipe-num">Only</span>Decoder</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box accent"><span class="pipe-num">Output</span>Generate Word at a Time</div>
+  </div>
+  <p style="font-size:.9rem;color:var(--muted)">GPT is decoder only. This is an example of how LLM can generate "incomplete" text — it generates one word at a time.</p>
+
+  <div class="hl info">Not all LLMs are transformers. Transformers are a type of neural architecture and can be used in other areas too, like computer vision.</div>
+</section>
+
+<!-- ─── 11. GPT DEEP DIVE ─── -->
+<section class="sec reveal" id="gpt-deep">
+  <div class="sec-tag">11 — GPT Deep Dive</div>
+  <h2>A CLOSER LOOK AT GPT</h2>
+
+  <h3>Unsupervised Pretraining</h3>
+  <p>The model is first trained on unlabelled data to learn general patterns. After this it is finetuned on supervised data for specific tasks.</p>
+  <ul class="slist">
+    <li>Model is first trained on unlabelled data</li>
+    <li>Learns general patterns</li>
+    <li>After this, finetuned on supervised, specific data</li>
+  </ul>
+
+  <h3>Next Word Prediction — The Core Task</h3>
+  <p>GPT is trained for <strong>next word prediction</strong> — predicting the next token given all previous tokens. This is self-supervised learning: input sentence is used as both data and label.</p>
+
+  <div class="ibox">
+    <div class="ibox-title">Training Example — Next Word Prediction</div>
+    <p style="font-size:.9rem;color:var(--muted);margin-bottom:1rem">Input: "Second law of robotics is:" → Model predicts "a" → correct: "robot"</p>
+    <div class="shot-example">
+      <div class="shot-label">Training sentence</div>
+      <div class="shot-line">Input text : "Second law of robotics is"</div>
+      <div class="shot-line">Next word predicted : <span class="shot-answer">robot</span></div>
+    </div>
+    <div class="shot-example" style="margin-top:.8rem">
+      <div class="shot-label">Self-supervised label</div>
+      <div class="shot-line">"This sentence here" → next word prediction → <span class="shot-answer">Self supervised (no labels!)</span></div>
+    </div>
+  </div>
+
+  <h3>GPT-3 Architecture</h3>
+  <p>GPT-3 is a scaled-up version of this model, implemented on large dataset.</p>
+  <table>
+    <thead><tr><th>Property</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Decoder layers</td><td>96</td></tr>
+      <tr><td>Parameters</td><td>175 billion</td></tr>
+      <tr><td>Training tokens</td><td>~300 billion</td></tr>
+      <tr><td>Architecture type</td><td>Decoder-only (no encoder)</td></tr>
+      <tr><td>Original paper</td><td>Generative Pretrained Transformer 2 (2018)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="hl info">GPT architecture is simpler than original transformer — encoder block and decoder block, but GPT uses only decoder block. GPT is known as a <strong>Decoder-only</strong> model.</div>
+
+  <h3>Zero-Shot, Few-Shot, and Fine-Shot Learning</h3>
+
+  <div class="ibox">
+    <div class="ibox-title">Learning Paradigms — Interactive</div>
+    <div class="tabs">
+      <button class="tab on" onclick="switchTab('shot','zero',this)">Zero-Shot</button>
+      <button class="tab" onclick="switchTab('shot','few',this)">Few-Shot</button>
+      <button class="tab" onclick="switchTab('shot','fine',this)">Fine-Shot</button>
+    </div>
+
+    <div class="tab-panel on" id="shot-zero">
+      <p><strong>Zero-Shot Learning</strong> — ability to completely generalize to unseen tasks without any prior specific examples.</p>
+      <p>Ex: Completing a task without seeing similar examples at all.</p>
+      <div class="shot-example">
+        <div class="shot-label">Zero-Shot: Translate English → French</div>
+        <div class="shot-line">English: Hello → French: <span class="shot-answer">bonjour</span></div>
+        <div class="shot-line">English: goodbye → French: <span class="shot-answer">?</span></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="shot-few">
+      <p><strong>Few-Shot Learning</strong> — learning from minimal number of examples provided by the user as input. Complete a task with only a few examples given.</p>
+      <div class="shot-example">
+        <div class="shot-label">Few-Shot: Translate (complete task with few examples provided)</div>
+        <div class="shot-line">English: Hello → French: bonjour</div>
+        <div class="shot-line">English: goodbye → French: <span class="shot-answer">au revoir</span></div>
+        <div class="shot-line">English: thank you → French: <span class="shot-answer">merci</span></div>
+        <div class="shot-line">English: good night → French: <span class="shot-answer">bonne nuit</span></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="shot-fine">
+      <p><strong>Fine-Shot (Finetuning) Learning</strong> — learning from minimal number of examples, plus explicit examples provided by user as input. GPT-4 is capable of both zero-shot and few-shot learning.</p>
+      <p><em>Note:</em> Zero-Shot vs Few-Shot: GPT-4 is capable of both zero-shot learning and few-shot learning.</p>
+    </div>
+  </div>
+
+  <h3>GPT-3 Utilizes Large Dataset</h3>
+  <p>Pretraining dataset of GPT-3 LLM — CommonCrawl, WebTexts, Books, Wikipedia. Token = the unit of text — you can think of it as used is there.</p>
+  <p>Many pretrained LLMs are available as open-source tools, can be used as general-purpose tools to write, extract, or edit text that was not part of training data.</p>
+</section>
+
+<!-- ─── 12. EMERGENT BEHAVIOUR ─── -->
+<section class="sec reveal" id="emergent">
+  <div class="sec-tag">12 — Emergent Behaviour</div>
+  <h2>EMERGENT BEHAVIOUR</h2>
+
+  <div class="callout" data-label="Definition">
+    <strong>Emergent Behaviour</strong> — Ability of a model to perform tasks that it was not explicitly trained to perform.
+  </div>
+
+  <p>Although GPT is trained for next word prediction, it can perform other tasks like language translation, spelling correction, text summarization, answering and many more. This is called <strong>emergent behaviour</strong>.</p>
+
+  <div class="hl">GPT models only trained simply on next word prediction — but it can perform other tasks like language translation. This is called emergent behaviour.</div>
+
+  <h3>Why Does Emergence Happen?</h3>
+  <p>When a model is trained on enough data and at sufficient scale, it internalises patterns beyond what was explicitly optimised. Next word prediction, done at scale on diverse text, forces the model to develop representations of grammar, facts, reasoning, and world knowledge — which then transfer to novel tasks.</p>
+
+  <p>Pretraining part of GPT → <strong>Unsupervised &amp; Auto-regressive</strong> — the model also called auto-regressive model uses previous output as input for future predictions.</p>
+</section>
+
+<!-- ─── 13. BUILD PIPELINE ─── -->
+<section class="sec reveal" id="build-stages">
+  <div class="sec-tag">13 — Full Build Pipeline</div>
+  <h2>FULL LLM BUILD PIPELINE</h2>
+  <p>Putting it all together — from raw data to a specialized deployed model:</p>
+
+  <div class="ibox">
+    <div class="ibox-title">End-to-End Pipeline Walkthrough</div>
+    <div class="step on" id="pipe-step-1">
+      <div class="hl"><strong>Stage 1 — Data &amp; Architecture</strong></div>
+      <ol class="slist">
+        <li><strong>Data Preparation &amp; Sampling</strong> — Collect and clean training corpus (CommonCrawl, Books, Wikipedia). Tokenize. Apply data quality filters.</li>
+        <li><strong>Attention Mechanism</strong> — Design multi-head self-attention. This is the core engine that allows context-aware token processing.</li>
+        <li><strong>LLM Architecture</strong> — Stack transformer decoder blocks. Define layers, heads, embedding dim, context length.</li>
+        <li><strong>Pretraining</strong> — Train on massive unlabelled corpus via next-token prediction. This builds the foundation model.</li>
+      </ol>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent2);margin-top:.8rem">→ Output: Building an LLM</div>
+    </div>
+
+    <div class="step" id="pipe-step-2">
+      <div class="hl"><strong>Stage 2 — Foundation Model</strong></div>
+      <ol class="slist" start="5">
+        <li><strong>Training Loop</strong> — Run forward pass, compute cross-entropy loss, backprop, update weights. Repeat for hundreds of billions of tokens.</li>
+        <li><strong>Model Evaluation</strong> — Evaluate perplexity, benchmark on held-out data, check for capabilities and failure modes.</li>
+        <li><strong>Load Pretrained Weights</strong> — Checkpoint the trained weights. These become reusable starting points for all downstream finetuning.</li>
+      </ol>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent2);margin-top:.8rem">→ Output: Foundation Model</div>
+    </div>
+
+    <div class="step" id="pipe-step-3">
+      <div class="hl"><strong>Stage 3 — Finetuning (two paths)</strong></div>
+      <div class="card-grid">
+        <div class="card">
+          <h4>Path A — Classifier</h4>
+          <p>Finetune on labelled dataset with class labels. Add classification head. Output: task-specific classifier (sentiment, NER, topic labelling).</p>
+        </div>
+        <div class="card">
+          <h4>Path B — Personal Assistant</h4>
+          <p>Finetune on instruction dataset (instruction, desired response pairs). Output: instruction-following assistant model.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-ctrl">
+      <button class="btn sec" onclick="stepNav('pipe',1,3,-1)">← Prev</button>
+      <button class="btn" onclick="stepNav('pipe',1,3,1)">Next →</button>
+      <span class="step-idx" id="pipe-idx">Step 1 of 3</span>
+    </div>
+  </div>
+
+  <h3>Summary — Key Concepts</h3>
+  <table>
+    <thead><tr><th>Concept</th><th>One-line Summary</th></tr></thead>
+    <tbody>
+      <tr><td>LLM</td><td>Deep neural network trained on massive text data to understand and generate language</td></tr>
+      <tr><td>Transformer</td><td>Architecture based on attention — what makes LLMs powerful; from "Attention is All You Need" (2017)</td></tr>
+      <tr><td>Pretraining</td><td>Unsupervised training on raw text via next-token prediction → foundation model</td></tr>
+      <tr><td>Finetuning</td><td>Supervised training on narrow, labelled data → task-specific or instruction-following model</td></tr>
+      <tr><td>BERT</td><td>Encoder-only transformer; bidirectional; trained via masked language model; for understanding</td></tr>
+      <tr><td>GPT</td><td>Decoder-only transformer; left-to-right; trained via next token prediction; for generation</td></tr>
+      <tr><td>Zero-shot</td><td>Model generalizes to task without any examples</td></tr>
+      <tr><td>Few-shot</td><td>Model generalizes to task with a small number of examples in the prompt</td></tr>
+      <tr><td>Emergent behaviour</td><td>Model performs tasks it was never explicitly trained for, due to scale</td></tr>
+      <tr><td>Attention</td><td>Assigns importance weights to tokens relative to each other; enables long-range dependency capture</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<script>
+// ── Progress Bar
+window.addEventListener('scroll', () => {
+  const d = document.documentElement;
+  const pct = (d.scrollTop / (d.scrollHeight - d.clientHeight)) * 100;
+  document.getElementById('prog').style.width = pct + '%';
+});
+
+// ── Reveal on Scroll
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
+}, { threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+// ── Nav Active State
+const sections = document.querySelectorAll('section.sec');
+const navLinks = document.querySelectorAll('nav a');
+const navObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`nav a[href="#${e.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { rootMargin: '-40% 0px -55% 0px' });
+sections.forEach(s => navObs.observe(s));
+
+// ── Step Navigator
+function stepNav(prefix, min, max, dir) {
+  const idx = document.getElementById(prefix + '-idx');
+  const cur = parseInt(idx.textContent.split(' ')[1]);
+  let next = cur + dir;
+  if (next < min) next = max;
+  if (next > max) next = min;
+  document.getElementById(prefix + '-step-' + cur).classList.remove('on');
+  document.getElementById(prefix + '-step-' + next).classList.add('on');
+  idx.textContent = `Step ${next} of ${max}`;
+}
+
+// ── Tab Switcher
+function switchTab(group, name, el) {
+  // deactivate all tabs and panels for this group
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(p => p.classList.remove('on'));
+  el.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById(group + '-' + name).classList.add('on');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Tokenization — Study Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+:root {
+  --bg:        #0d1117;
+  --bg2:       #161b22;
+  --bg3:       #1c2128;
+  --bg4:       #21262d;
+  --text:      #e6edf3;
+  --muted:     #8b949e;
+  --accent:    #f78166;
+  --accent2:   #d29922;
+  --accent3:   #58a6ff;
+  --accent4:   #3fb950;
+  --border:    #30363d;
+  --highlight: #1f2937;
+  --dark:      #010409;
+  --dark2:     #0d1117;
+  --grad1:     linear-gradient(135deg,#1c2128 0%,#161b22 100%);
+  --grad2:     linear-gradient(135deg,#21262d 0%,#1c2128 100%);
+  --grad-accent: linear-gradient(135deg,#f78166 0%,#d29922 100%);
+  --grad-blue:   linear-gradient(135deg,#58a6ff 0%,#3fb950 100%);
+  --card-glow: 0 0 0 1px #30363d, 0 4px 24px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  font-size:15px;
+  line-height:1.75;
+  min-height:100vh;
+}
+
+/* ── Special Token display ── */
+.sptok{
+  display:inline-block;
+  font-family:'JetBrains Mono',monospace;
+  font-variant-ligatures:none;
+  font-feature-settings:"liga" 0,"calt" 0;
+  font-size:12px;font-weight:700;
+  color:var(--accent3);
+  background:rgba(88,166,255,.1);
+  border:1px solid rgba(88,166,255,.3);
+  border-radius:4px;padding:.1em .4em;
+  letter-spacing:0;white-space:nowrap;
+}
+.sptok.red{color:var(--accent);background:rgba(247,129,102,.1);border-color:rgba(247,129,102,.3)}
+.sptok.green{color:var(--accent4);background:rgba(63,185,80,.1);border-color:rgba(63,185,80,.3)}
+.sptok.amber{color:var(--accent2);background:rgba(210,153,34,.1);border-color:rgba(210,153,34,.3)}
+
+/* ── Progress Bar ── */
+#prog{position:fixed;top:0;left:0;height:3px;background:var(--grad-accent);z-index:300;width:0;transition:width .1s}
+
+/* ── Nav ── */
+nav{
+  position:fixed;top:3px;left:0;right:0;
+  background:rgba(13,17,23,.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:0;
+  padding:0 2rem;
+  height:48px;z-index:200;
+}
+.nav-brand{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:18px;letter-spacing:2px;
+  background:var(--grad-accent);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-right:2rem;white-space:nowrap;flex-shrink:0;
+}
+.nav-links{display:flex;gap:2px;overflow-x:auto;flex:1}
+.nav-links::-webkit-scrollbar{height:0}
+.nav-links a{
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;
+  color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:6px;
+  border:1px solid transparent;white-space:nowrap;
+  transition:all .2s;
+}
+.nav-links a:hover,.nav-links a.active{
+  color:var(--accent);background:rgba(247,129,102,.08);
+  border-color:rgba(247,129,102,.3);
+}
+
+/* ── Main ── */
+main{max-width:900px;margin:0 auto;padding:80px 2rem 80px}
+
+/* ── Hero ── */
+.hero{
+  display:grid;grid-template-columns:1.1fr 0.9fr;gap:3rem;
+  padding:3rem 0 3.5rem;border-bottom:1px solid var(--border);
+  margin-bottom:4rem;
+}
+.hero h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(2.8rem,5.5vw,5rem);
+  line-height:1;letter-spacing:2px;color:var(--text);
+}
+.hero h1 span{background:var(--grad-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-right{padding-top:.5rem}
+.hero-right p{
+  font-family:'DM Serif Display',serif;
+  font-style:italic;font-size:1.05rem;
+  color:var(--muted);line-height:1.6;
+}
+.hero-meta{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10.5px;letter-spacing:.5px;
+  color:var(--muted);margin-top:1.2rem;
+  padding-top:1rem;border-top:1px solid var(--border);
+}
+.hero-meta span{color:var(--accent3);margin-right:.5rem}
+
+/* ── Section ── */
+.sec{margin-bottom:5rem}
+.sec-tag{
+  font-family:'JetBrains Mono',monospace;
+  font-size:13.5px;letter-spacing:3px;
+  color:var(--accent);text-transform:uppercase;
+  margin-bottom:.6rem;
+}
+.sec h2{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:2rem;letter-spacing:1px;
+  color:var(--text);margin-bottom:1.5rem;
+  border-bottom:1px solid var(--border);
+  padding-bottom:.6rem;
+}
+.sec h3{
+  font-family:'DM Serif Display',serif;
+  font-size:1.1rem;color:var(--text);
+  margin:1.5rem 0 .6rem;
+}
+.sec p{color:var(--muted);margin-bottom:.9rem}
+
+/* ── Reveal ── */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .5s,transform .5s}
+.reveal.show{opacity:1;transform:none}
+
+/* ── Highlight Box ── */
+.hl{
+  background:rgba(88,166,255,.07);
+  border:1px solid rgba(88,166,255,.2);
+  border-radius:8px;
+  padding:1rem 1.2rem;margin:1rem 0;
+  color:var(--text);
+}
+.hl.warn{border-color:rgba(210,153,34,.25);background:rgba(210,153,34,.07)}
+.hl.success{border-color:rgba(63,185,80,.25);background:rgba(63,185,80,.07)}
+.hl.red{border-color:rgba(247,129,102,.25);background:rgba(247,129,102,.07)}
+.hl strong{color:var(--accent3);font-weight:600}
+.hl.warn strong{color:var(--accent2)}
+.hl.success strong{color:var(--accent4)}
+.hl.red strong{color:var(--accent)}
+
+/* ── Callout ── */
+.callout{
+  border:1px solid var(--border);border-radius:8px;
+  padding:1.2rem 1.2rem 1rem;margin:1.2rem 0;
+  background:var(--bg2);position:relative;
+}
+.callout::before{
+  content:attr(data-label);
+  position:absolute;top:-10px;left:12px;
+  background:var(--bg2);padding:0 8px;
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;
+  border:1px solid var(--border);border-radius:4px;
+}
+
+/* ── Pipeline ── */
+.pipeline{
+  display:flex;flex-wrap:wrap;align-items:center;
+  gap:.4rem;margin:1.2rem 0;padding:1rem;
+  background:var(--bg2);border-radius:8px;
+  border:1px solid var(--border);
+}
+.pipe-box{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:6px;padding:.4rem .8rem;
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;
+  color:var(--text);white-space:nowrap;
+}
+.pipe-box.accent{background:rgba(247,129,102,.15);border-color:var(--accent);color:var(--accent)}
+.pipe-box.blue{background:rgba(88,166,255,.12);border-color:var(--accent3);color:var(--accent3)}
+.pipe-box.green{background:rgba(63,185,80,.12);border-color:var(--accent4);color:var(--accent4)}
+.pipe-box.amber{background:rgba(210,153,34,.12);border-color:var(--accent2);color:var(--accent2)}
+.pipe-arrow{color:var(--muted);font-size:1rem}
+
+/* ── Math Block ── */
+.mb{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:8px;
+  padding:1.2rem 1.4rem;margin:1rem 0;
+  overflow-x:auto;color:#f9e9c8;
+}
+.math-inline{color:#f9e9c8;font-size:.95em}
+
+/* ── Cards ── */
+.card-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:1rem;margin:1.2rem 0;
+}
+.card{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:8px;
+  padding:1.1rem;box-shadow:var(--card-glow);
+  transition:transform .2s,box-shadow .2s;
+}
+.card:hover{transform:translateY(-2px);box-shadow:0 0 0 1px #30363d,0 8px 32px rgba(0,0,0,.5)}
+.card.blue{border-color:rgba(88,166,255,.3)}
+.card.green{border-color:rgba(63,185,80,.3)}
+.card.amber{border-color:rgba(210,153,34,.3)}
+.card-title{
+  font-family:'JetBrains Mono',monospace;font-size:10.5px;
+  letter-spacing:1px;text-transform:uppercase;
+  color:var(--accent);margin-bottom:.6rem;font-weight:600;
+}
+.card.blue .card-title{color:var(--accent3)}
+.card.green .card-title{color:var(--accent4)}
+.card.amber .card-title{color:var(--accent2)}
+.card p{font-size:.875rem;color:var(--muted);margin:0}
+.card ul{padding-left:1.1rem;color:var(--muted);font-size:.875rem}
+.card ul li{margin-bottom:.3rem}
+.card.red{border-color:rgba(247,129,102,.3)}
+
+/* ── Tables ── */
+table{
+  width:100%;border-collapse:collapse;
+  font-family:'JetBrains Mono',monospace;font-size:12.5px;
+  margin:1rem 0;background:var(--bg2);
+  border-radius:8px;overflow:hidden;
+  border:1px solid var(--border);
+}
+th{
+  background:var(--bg3);color:#f9e9c8;
+  padding:.65rem 1rem;text-align:left;font-weight:600;
+  border-bottom:1px solid var(--border);letter-spacing:.5px;font-size:11px;
+}
+td{padding:.55rem 1rem;border-bottom:1px solid var(--border);color:var(--muted)}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+td.val{color:var(--text);font-weight:600}
+td.accent{color:var(--accent)}
+td.blue{color:var(--accent3)}
+td.green{color:var(--accent4)}
+
+/* ── iBox ── */
+.ibox{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:10px;padding:1.4rem;margin:1.2rem 0;
+  box-shadow:var(--card-glow);
+}
+.ibox-title{
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--muted);border-bottom:1px solid var(--border);
+  padding-bottom:.7rem;margin-bottom:1rem;
+}
+
+/* ── Step navigator ── */
+.step{display:none;animation:fadeUp .3s ease}
+.step.on{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.step-ctrl{display:flex;align-items:center;gap:.6rem;margin-top:1rem}
+.step-idx{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin:0 .4rem}
+
+/* ── Buttons ── */
+.btn{
+  display:inline-flex;align-items:center;gap:.4rem;
+  background:var(--bg3);border:1px solid var(--border);
+  color:var(--text);border-radius:6px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  padding:.45rem .9rem;cursor:pointer;letter-spacing:.3px;
+  transition:all .2s;
+}
+.btn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.blue:hover,.btn.blue.on{background:var(--accent3);border-color:var(--accent3)}
+.btn.sec{background:transparent;color:var(--muted)}
+.btn.sec:hover{background:var(--bg3);color:var(--text)}
+
+/* ── Code inline ── */
+code{
+  font-family:'JetBrains Mono',monospace;font-size:.82em;
+  background:rgba(88,166,255,.1);color:var(--accent3);
+  padding:.1em .4em;border-radius:4px;
+  border:1px solid rgba(88,166,255,.2);
+}
+
+/* ── Token boxes (visual) ── */
+.token-row{display:flex;flex-wrap:wrap;gap:.4rem;margin:.6rem 0;align-items:center}
+.tok{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:2.4rem;padding:.3rem .6rem;
+  border:1px solid var(--border);border-radius:5px;
+  font-family:'JetBrains Mono',monospace;font-size:12px;
+  background:var(--bg3);color:var(--text);font-weight:600;
+}
+.tok.id{background:rgba(247,129,102,.12);border-color:var(--accent);color:var(--accent)}
+.tok.emb{
+  display:inline-flex;align-items:center;gap:1px;
+  padding:.25rem .4rem;
+}
+.emb-cell{width:10px;height:20px;border-radius:2px;background:var(--border)}
+.emb-cell:nth-child(1){background:var(--accent3)}
+.emb-cell:nth-child(2){background:var(--border)}
+.emb-cell:nth-child(3){background:var(--accent4)}
+.emb-cell:nth-child(4){background:var(--border)}
+.row-label{
+  font-family:'JetBrains Mono',monospace;font-size:10.5px;
+  color:var(--muted);min-width:110px;flex-shrink:0;letter-spacing:.3px;
+}
+.arrow-label{font-size:1rem;color:var(--muted);margin:0 .4rem}
+
+/* ── Vocab map ── */
+.vocab-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+  gap:.5rem;margin:.8rem 0;
+}
+.vocab-item{
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:6px;padding:.35rem .7rem;
+  font-family:'JetBrains Mono',monospace;font-size:12px;
+}
+.vocab-word{color:var(--text)}
+.vocab-id{
+  background:var(--accent);color:#fff;
+  border-radius:4px;padding:.1rem .4rem;font-size:11px;font-weight:700;
+}
+
+/* ── BPE iteration table ── */
+.iter-block{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:8px;margin:.8rem 0;overflow:hidden;
+}
+.iter-header{
+  background:var(--bg3);padding:.5rem 1rem;
+  font-family:'JetBrains Mono',monospace;font-size:11px;
+  letter-spacing:1px;color:var(--accent);text-transform:uppercase;
+  border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.iter-header .merge-note{color:var(--accent4);font-size:10px}
+.iter-body{padding:0}
+
+/* ── Two-col layout ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin:1rem 0}
+@media(max-width:600px){
+  .hero{grid-template-columns:1fr}
+  .two-col{grid-template-columns:1fr}
+  nav{padding:0 1rem}
+  main{padding:80px 1rem 60px}
+}
+
+/* ── Divider ── */
+.div-line{border:none;border-top:1px solid var(--border);margin:2rem 0}
+
+/* ── Tag pills ── */
+.tag{
+  display:inline-block;font-family:'JetBrains Mono',monospace;
+  font-size:10px;letter-spacing:.5px;padding:.2rem .6rem;
+  border-radius:100px;background:rgba(88,166,255,.1);
+  color:var(--accent3);border:1px solid rgba(88,166,255,.25);
+  margin:.1rem;
+}
+.tag.red{background:rgba(247,129,102,.1);color:var(--accent);border-color:rgba(247,129,102,.25)}
+.tag.green{background:rgba(63,185,80,.1);color:var(--accent4);border-color:rgba(63,185,80,.25)}
+.tag.amber{background:rgba(210,153,34,.1);color:var(--accent2);border-color:rgba(210,153,34,.25)}
+
+/* ── Gradient block ── */
+.grad-block{
+  background:var(--grad1);
+  border:1px solid var(--border);border-radius:10px;
+  padding:1.4rem;margin:1rem 0;
+  position:relative;overflow:hidden;
+}
+.grad-block::before{
+  content:'';position:absolute;top:0;right:0;
+  width:200px;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(88,166,255,.04));
+  pointer-events:none;
+}
+
+/* ── Section intro ── */
+.sec-intro{
+  color:var(--muted);font-size:.95rem;
+  padding-left:0;margin-bottom:1.5rem;
+}
+
+/* ── Sub heading ── */
+.sub-h{
+  font-family:'JetBrains Mono',monospace;font-size:12px;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--accent3);margin:1.4rem 0 .5rem;
+  display:flex;align-items:center;gap:.5rem;
+}
+.sub-h::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Note box ── */
+.note{
+  background:rgba(210,153,34,.06);
+  border:1px solid rgba(210,153,34,.2);
+  border-radius:8px;padding:.9rem 1.1rem;margin:.8rem 0;
+}
+.note-label{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:1px;color:var(--accent2);text-transform:uppercase;
+  margin-bottom:.4rem;font-weight:700;
+}
+.note p{color:var(--muted);font-size:.875rem;margin:0}
+</style>
+</head>
+<body>
+
+<div id="prog"></div>
+
+<nav>
+  <div class="nav-brand">TOKENIZATION</div>
+  <div class="nav-links">
+    <a href="#intro">Intro</a>
+    <a href="#tokenizing">Tokenizing Text</a>
+    <a href="#special-tokens">Special Tokens</a>
+    <a href="#tok-types">Tokenization Types</a>
+    <a href="#char-based">Char-Based</a>
+    <a href="#bpe-intro">BPE Intro</a>
+    <a href="#bpe-algo">BPE Algorithm</a>
+    <a href="#bpe-iters">BPE Iterations</a>
+    <a href="#bpe-practice">BPE in Practice</a>
+  </div>
+</nav>
+
+<main>
+
+<!-- HERO -->
+<div class="hero">
+  <div>
+    <h1>TEXT <span>TOKENIZATION</span><br>FOR LLMs</h1>
+  </div>
+  <div class="hero-right">
+    <p>How raw text becomes numerical representations that language models can process — from splitting to BPE subword encoding.</p>
+    <div class="hero-meta">
+      <span>Sections: 9</span> | <span>Examples: BPE walk-through × 5 iters</span> | <span>Topic: LLM Pre-training Data Prep</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 01 — INTRODUCTION -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="intro">
+  <div class="sec-tag">01 — Data Preparation</div>
+  <h2>Introduction: Data Preparation & Sampling</h2>
+
+  <p class="sec-intro">We look at data preparation and sampling in the context of training a Language Model (LM). The central question: <em>How do you prepare input text for training a language model?</em></p>
+
+  <p>The process involves <strong>three sequential stages</strong> that transform raw text into vector representations a model can learn from.</p>
+
+  <div class="pipeline">
+    <div class="pipe-box accent">Input Text</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">Stage 1: Split into Tokens</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">Stage 2: Convert to Token IDs</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Stage 3: Encode into Vectors</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box">GPT → Post-Processing → Output</div>
+  </div>
+
+  <div class="card-grid" style="margin-top:1.4rem">
+    <div class="card red">
+      <div class="card-title">Stage 1 — Split</div>
+      <p>Split text into individual words and subwords (tokens). Whitespace handling depends on the application.</p>
+    </div>
+    <div class="card blue">
+      <div class="card-title">Stage 2 — Token IDs</div>
+      <p>Convert each token into an integer ID using a fixed vocabulary mapping. Each unique token gets a unique integer.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Stage 3 — Embeddings</div>
+      <p>Encode token IDs into dense vector representations (embeddings) that the model actually processes numerically.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Concrete Example</div>
+  <p>Starting with the input text: <code>"This is an example"</code></p>
+
+  <div style="margin:1rem 0">
+    <div style="display:flex;align-items:center;gap:1rem;margin:.5rem 0;flex-wrap:wrap">
+      <span class="row-label">Input text</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text)">"This is an example"</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:1rem;margin:.5rem 0;flex-wrap:wrap">
+      <span class="row-label">Tokenized text</span>
+      <div class="token-row">
+        <div class="tok">This</div>
+        <div class="tok">is</div>
+        <div class="tok">an</div>
+        <div class="tok">example</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:1rem;margin:.5rem 0;flex-wrap:wrap">
+      <span class="row-label">Token IDs</span>
+      <div class="token-row">
+        <div class="tok id">4013</div>
+        <div class="tok id">201</div>
+        <div class="tok id">302</div>
+        <div class="tok id">1184</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:1rem;margin:.5rem 0;flex-wrap:wrap">
+      <span class="row-label">Token embeddings</span>
+      <div class="token-row">
+        <div class="tok emb"><div class="emb-cell"></div><div class="emb-cell"></div><div class="emb-cell"></div><div class="emb-cell"></div></div>
+        <div class="tok emb"><div class="emb-cell"></div><div class="emb-cell"></div><div class="emb-cell"></div><div class="emb-cell"></div></div>
+        <div class="tok emb"><div class="emb-cell"></div><div class="emb-cell"></div><div class="emb-cell"></div><div class="emb-cell"></div></div>
+        <div class="tok emb"><div class="emb-cell"></div><div class="emb-cell"></div><div class="emb-cell"></div><div class="emb-cell"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 02 — TOKENIZING TEXT -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="tokenizing">
+  <div class="sec-tag">02 — Tokenizing Text</div>
+  <h2>Tokenizing Text: The Verdict Dataset</h2>
+
+  <p class="sec-intro">Dataset used: <em>"The Verdict"</em> by Edith Wharton — a short story used to illustrate the preprocessing pipeline.</p>
+
+  <div class="grad-block">
+    <div class="sub-h">Loading the Dataset</div>
+    <div class="mb" style="margin-top:.5rem">
+      $$\text{raw\_text} = \text{open("the-verdict.txt", "r").read()} \quad \Rightarrow \quad \text{len(raw\_text)} = 20{,}479$$
+    </div>
+    <p style="font-size:.875rem;color:var(--muted)">Our goal: tokenize this 20,479 character short story into individual words and special characters, which we can then turn into embeddings for LM training.</p>
+  </div>
+
+  <div class="note">
+    <div class="note-label">📌 Scale Note</div>
+    <p>It is common to process millions of articles and hundreds of thousands of books — many gigabytes of text — when working with LLMs. However, for education purposes, it is sufficient to work with smaller text samples like a single book to illustrate the main idea behind text preprocessing and make it possible to run in reasonable time on customer hardware.</p>
+  </div>
+
+  <div class="sub-h">Simple Regex Tokenization</div>
+
+  <div class="callout" data-label="Python Code">
+    <p style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--text);line-height:1.8">
+      import re<br>
+      text = "Hello World. This is a text."<br>
+      result = re.split(r'(\s)', text)<br>
+      result → ['Hello', ' ', 'World.', ' ', 'This', ...]
+    </p>
+  </div>
+
+  <div class="sub-h">Whitespace Handling Decision</div>
+  <div class="two-col">
+    <div class="hl warn">
+      <strong>Remove Whitespace</strong><br>
+      <span style="font-size:.875rem">Reduces memory and computing resources. Simpler vocabulary.</span>
+    </div>
+    <div class="hl">
+      <strong>Keep Whitespace</strong><br>
+      <span style="font-size:.875rem">Useful for models sensitive to exact structure. Depends on application and requirements.</span>
+    </div>
+  </div>
+
+  <div class="sub-h">Steps: Text → Token IDs</div>
+  <div class="pipeline">
+    <div class="pipe-box accent">a) Download Dataset</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">b) Load into Python</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">c) Convert to Tokens</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">d) Convert to Token IDs</div>
+  </div>
+
+  <div class="sub-h">Vocabulary Creation Example</div>
+  <p>Sample training text: <em>"The quick brown fox jump over the lazy dog"</em></p>
+
+  <div class="two-col">
+    <div>
+      <p style="font-size:.875rem;color:var(--muted);margin-bottom:.5rem">Tokenized output:</p>
+      <div class="token-row" style="flex-wrap:wrap">
+        <div class="tok" style="font-size:11px">The</div>
+        <div class="tok" style="font-size:11px">quick</div>
+        <div class="tok" style="font-size:11px">brown</div>
+        <div class="tok" style="font-size:11px">fox</div>
+        <div class="tok" style="font-size:11px">jump</div>
+        <div class="tok" style="font-size:11px">over</div>
+        <div class="tok" style="font-size:11px">the</div>
+        <div class="tok" style="font-size:11px">lazy</div>
+        <div class="tok" style="font-size:11px">dog</div>
+      </div>
+    </div>
+    <div>
+      <p style="font-size:.875rem;color:var(--muted);margin-bottom:.5rem">Vocabulary (unique tokens → IDs):</p>
+      <div class="vocab-grid">
+        <div class="vocab-item"><span class="vocab-word">The</span><span class="vocab-id">0</span></div>
+        <div class="vocab-item"><span class="vocab-word">quick</span><span class="vocab-id">1</span></div>
+        <div class="vocab-item"><span class="vocab-word">brown</span><span class="vocab-id">2</span></div>
+        <div class="vocab-item"><span class="vocab-word">fox</span><span class="vocab-id">3</span></div>
+        <div class="vocab-item"><span class="vocab-word">jump</span><span class="vocab-id">4</span></div>
+        <div class="vocab-item"><span class="vocab-word">over</span><span class="vocab-id">5</span></div>
+        <div class="vocab-item"><span class="vocab-word">the</span><span class="vocab-id">6</span></div>
+        <div class="vocab-item"><span class="vocab-word">lazy</span><span class="vocab-id">7</span></div>
+        <div class="vocab-item"><span class="vocab-word">dog</span><span class="vocab-id">8</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-h">Encoding Example</div>
+  <div class="hl success">
+    <strong>Text:</strong> "Fox chased the dog"<br>
+    <strong>Tokenized text:</strong> [fox, chased, the, dog]<br>
+    <strong>Map using vocab:</strong> [3, 3, 0, 1] → tokenized encoded text
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 03 — SPECIAL TOKENS -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="special-tokens">
+  <div class="sec-tag">03 — Special Context Tokens</div>
+  <h2>Decode Tokenized Text & Special Tokens</h2>
+
+  <p class="sec-intro">When working with multiple text sources, we add special tokens that act as sentence-signaling markers — marking the start and/or end of particular sources.</p>
+
+  <div class="sub-h">Token IDs Structure (Decoded)</div>
+  <p>Sample token ID table (bidirectional — encode and decode):</p>
+  <table>
+    <tr><th>Token ID</th><th>Token</th></tr>
+    <tr><td class="val">0</td><td>the</td></tr>
+    <tr><td class="val">1</td><td>fox</td></tr>
+    <tr><td class="val">2</td><td>|eos|</td></tr>
+    <tr><td class="val">3</td><td>|bos|</td></tr>
+  </table>
+
+  <div class="sub-h">Special Tokens and Their Role</div>
+
+  <p>Special context tokens are added to help the model understand additional special meaning like unknown words or sequence boundaries.</p>
+
+  <div class="card-grid">
+    <div class="card blue">
+      <div class="card-title"><span class="sptok amber">&lt;|unk|&gt;</span></div>
+      <p>Unknown token — replaces words not found in the vocabulary. Helps the model handle out-of-vocabulary words gracefully.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title"><span class="sptok green">&lt;|endoftext|&gt;</span></div>
+      <p>End-of-text token — marks the boundary between independent text documents. Helps the model understand context boundaries.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title"><span class="sptok green">&lt;|bos|&gt;</span> / <span class="sptok green">&lt;|eos|&gt;</span></div>
+      <p>Beginning / End of sentence tokens. Mark the start and end of sequences. Used especially in encoder-decoder architectures.</p>
+    </div>
+    <div class="card red">
+      <div class="card-title"><span class="sptok amber">&lt;|pad|&gt;</span></div>
+      <p>Padding token — used to make sequences of equal length in batches. Not meaningful; model ignores via attention masking.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Text Sources & Special Token Pattern</div>
+  <div class="ibox">
+    <div class="ibox-title">Multiple Source Concatenation</div>
+    <div class="pipeline" style="flex-direction:column;align-items:flex-start;gap:.5rem">
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <div class="pipe-box">Text Source 1</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box blue">Text 1 + <span class="sptok green">&lt;|endoftext|&gt;</span></div>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <div class="pipe-box">Text Source 2</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box blue">Text 2 + <span class="sptok green">&lt;|endoftext|&gt;</span></div>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <div class="pipe-box">Text Source 3</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box blue">Text 3 + <span class="sptok green">&lt;|endoftext|&gt;</span></div>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <div class="pipe-box">Text Source 4</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box blue">Text 4 + <span class="sptok green">&lt;|endoftext|&gt;</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-h">Existing Vocabulary with Special Tokens</div>
+  <p>Example sentence: "The fox chased the dog"</p>
+  <div class="token-row">
+    <div class="tok"><span class="sptok amber">&lt;|unk|&gt;</span></div>
+    <div class="tok">The</div>
+    <div class="tok">fox</div>
+    <div class="tok">Fox</div>
+    <div class="tok">chased</div>
+    <div class="tok">the</div>
+    <div class="tok"><span class="sptok green">&lt;|eos|&gt;</span></div>
+    <div class="tok">dog</div>
+  </div>
+  <p style="font-size:.875rem;color:var(--muted);margin-top:.5rem">Note: "Fox" (capital) and "fox" (lowercase) are treated as separate tokens. The vocabulary maps these to distinct IDs.</p>
+
+  <div class="hl red">
+    <strong>Example vocab mapping:</strong><br>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:12px">
+      <span class="sptok amber">&lt;|unk|&gt;</span> → 3±83 &nbsp;|&nbsp; <span class="sptok green">&lt;|endoftext|&gt;</span> → 2±386 &nbsp;|&nbsp; chased → 3 &nbsp;|&nbsp; fox → 2 &nbsp;|&nbsp; the → 1
+    </span>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 04 — TYPES OF TOKENIZATION -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="tok-types">
+  <div class="sec-tag">04 — Types of Tokenization</div>
+  <h2>Types of Tokenization Algorithms</h2>
+
+  <p class="sec-intro">Three major paradigms for how text gets split into tokens — each with distinct trade-offs between vocabulary size, OOV handling, and computational cost.</p>
+
+  <div class="sub-h">1. Word-Based Tokenization</div>
+
+  <div class="hl warn">
+    <strong>Rule:</strong> Each word is treated as a separate token.<br>
+    <strong>Example sentence:</strong> "My hobby is playing cricket"<br>
+    <strong>Tokens:</strong> [my, hobby, is, playing, cricket]
+  </div>
+
+  <div class="two-col">
+    <div class="card green">
+      <div class="card-title">Advantages</div>
+      <ul>
+        <li>Very small vocabulary (e.g. 26 special characters)</li>
+        <li>Solves the OOV problem</li>
+      </ul>
+    </div>
+    <div class="card red">
+      <div class="card-title">Problems</div>
+      <ul>
+        <li>Meaning associated with words completely lost</li>
+        <li>The tokenized sequence becomes much longer</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sub-h">2. Subword-Based Tokenization</div>
+
+  <div class="hl">
+    <strong>Rule:</strong> Balance between word-based and character-based tokenization — do NOT split frequently used words, DO split into smaller subwords.<br>
+    <strong>Key insight:</strong> Subword splitting helps the model learn morphological relationships between words with the same root token.
+  </div>
+
+  <div class="callout" data-label="Subword Example">
+    <p style="font-size:.875rem;color:var(--muted)">Word: <code>boy</code> — should NOT split (it's a common word)</p>
+    <p style="font-size:.875rem;color:var(--muted)">Word: <code>boys</code> — SHOULD split into <code>[boy, s]</code></p>
+    <p style="font-size:.875rem;color:var(--muted);margin-top:.5rem">This allows the model to learn the morphological relationship between "boy" and "boys" — they share the same root token. Subword splitting also helps the model generalize better when words like "root", "tokenization" or different meaning of similar words like "boy", "boy's" are used.</p>
+  </div>
+
+  <div class="sub-h">3. Character-Based Tokenization</div>
+
+  <div class="hl warn">
+    <strong>Example:</strong> "my hobby is playing cricket"<br>
+    <strong>Tokens:</strong> [m, y, h, o, b, b, y, i, s, p, l, a, y, i, n, g, c, r, i, c, k, e, t]
+  </div>
+
+  <div class="two-col">
+    <div class="card green">
+      <div class="card-title">Advantages</div>
+      <ul>
+        <li>Very small vocabulary</li>
+        <li>Few/no unknown tokens (OOV near-zero)</li>
+      </ul>
+    </div>
+    <div class="card red">
+      <div class="card-title">Problems</div>
+      <ul>
+        <li>Tokens and tokenizing no meaningful for language understanding</li>
+        <li>Different meaning of similar words like "boy" splits into [b, o, y]</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note">
+    <div class="note-label">Also: Byte Encoding</div>
+    <p>A more sophisticated tokenization scheme based on the concept of merging the most frequent byte pairs. It helps the model to learn different forms of root but different in suffixes — words and morphemization are made up of different root and suffixes are used in some synthetic situation. Example: Example tokens with counters on both sides — estimate different positions (markers).</p>
+  </div>
+
+  <div class="sub-h">BPE Used in Famous Models</div>
+  <div class="pipeline">
+    <div class="pipe-box accent">GPT-2</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">GPT-3</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Original ChatGPT model</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">Used to train powerful LLMs such as these</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 05 — CHARACTER-BASED DETAILS -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="char-based">
+  <div class="sec-tag">05 — Character-Based Detail</div>
+  <h2>Character-Based Tokenization: Deep Dive</h2>
+
+  <p class="sec-intro">Character tokenization uses letters + special characters as tokens. Example: "my hobby is playing cricket" → individual characters.</p>
+
+  <div class="callout" data-label="Character Split">
+    <div class="token-row">
+      <div class="tok" style="font-size:11px">m</div><div class="tok" style="font-size:11px">y</div>
+      <div class="tok" style="font-size:11px">h</div><div class="tok" style="font-size:11px">o</div>
+      <div class="tok" style="font-size:11px">b</div><div class="tok" style="font-size:11px">b</div>
+      <div class="tok" style="font-size:11px">y</div><div class="tok" style="font-size:11px">i</div>
+      <div class="tok" style="font-size:11px">s</div><div class="tok" style="font-size:11px">p</div>
+      <div class="tok" style="font-size:11px">l</div><div class="tok" style="font-size:11px">a</div>
+      <div class="tok" style="font-size:11px">y</div><div class="tok" style="font-size:11px">i</div>
+      <div class="tok" style="font-size:11px">n</div><div class="tok" style="font-size:11px">g</div>
+      <div class="tok" style="font-size:11px">c</div><div class="tok" style="font-size:11px">r</div>
+      <div class="tok" style="font-size:11px">i</div><div class="tok" style="font-size:11px">c</div>
+      <div class="tok" style="font-size:11px">k</div><div class="tok" style="font-size:11px">e</div>
+      <div class="tok" style="font-size:11px">t</div>
+    </div>
+  </div>
+
+  <div class="sub-h">Advantages</div>
+  <div class="hl success">
+    <strong>Very small vocabulary</strong> — uses only 26 English letters + special characters. Only ~30 tokens needed for the entire English language.<br><br>
+    <strong>Solves OOV Problem</strong> — any word can be built from characters, so there are never "unknown" tokens. Works for any language if characters are included.
+  </div>
+
+  <div class="sub-h">Problems</div>
+  <div class="hl red">
+    <strong>Tokens not meaningful for language understanding</strong> — individual characters carry no semantic meaning. The model must learn to compose them back into words, which is very hard.<br><br>
+    <strong>Sequences become much longer</strong> — "boy" becomes 3 tokens instead of 1. This explodes sequence length, increasing memory and compute cost quadratically (due to attention).<br><br>
+    <strong>Different meaning of similar words</strong> — "boy" and "boys" both start with [b, o, y] but the model cannot easily distinguish meaning from characters alone.
+  </div>
+
+  <div class="sub-h">Subword Splitting Rule</div>
+  <div class="callout" data-label="Splitting Rule">
+    <p><strong>Rule 1:</strong> Do not split the more commonly used words frequently into smaller subwords.</p>
+    <p style="margin-top:.5rem"><strong>Rule 2:</strong> Balance between word-based and character-based tokenization — split the more rarely used words or sequence boundaries.</p>
+    <div style="margin-top:.8rem;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)">
+      boy → Should NOT split<br>
+      boys → Should be split into [boy, s]
+    </div>
+    <p style="margin-top:.6rem;font-size:.875rem;color:var(--muted)">Example: Tokens and tokenizing on both between words with some root tokens — the model can generalize the morphological relationship.</p>
+  </div>
+
+  <div class="note">
+    <div class="note-label">Subword tokenization example</div>
+    <p>Sentence: "My hobby is playing cricket" → <code>[my, hobby, is, playing, cricket]</code> (each word separate token since all are common English words — no splitting needed)</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 06 — BPE INTRODUCTION -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="bpe-intro">
+  <div class="sec-tag">06 — BPE Introduction</div>
+  <h2>Byte Pair Encoding (BPE)</h2>
+
+  <p class="sec-intro">BPE is a subword tokenization technique originally proposed in 1994 as a data compression algorithm. It was later adapted as a tokenization scheme for NLP/LLMs.</p>
+
+  <div class="hl">
+    <strong>BPE Purpose:</strong> Ensure that most common words in the vocabulary are represented as single tokens, while rarer words are broken down into subword tokens.
+  </div>
+
+  <div class="sub-h">Why BPE?</div>
+
+  <div class="card-grid">
+    <div class="card blue">
+      <div class="card-title">Helps Generalize</div>
+      <p>It also helps the model to learn that tokenization words and morphemization are made up of different root and suffixes. Used in some synthetic situations.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">Root Learning</div>
+      <p>BPE is subword tokenization. It helps the model to learn different root but different in suffixes (e.g. information, informational, informationally).</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Popular Models</div>
+      <p>BPE is used to train powerful LLMs such as GPT-2, GPT-3, original ChatGPT model. The algorithm is iterative and data-driven.</p>
+    </div>
+    <div class="card red">
+      <div class="card-title">Data Compression Origins</div>
+      <p>Originally proposed in 1994 as a data compression algorithm — it replaces the most frequent pair of consecutive symbols with a new symbol that does not already occur in the data.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Core Idea</div>
+  <div class="mb">$$\text{BPE:} \quad \text{replace most frequent adjacent pair} (a, b) \rightarrow \text{new token} \; (ab)$$</div>
+
+  <div class="callout" data-label="BPE Core Rule">
+    <p><strong>What BPE does:</strong></p>
+    <ul style="padding-left:1.2rem;color:var(--muted);font-size:.875rem;margin-top:.4rem">
+      <li>It replaces most frequent pair of consecutive symbols</li>
+      <li>Builds a new token that does not already occur</li>
+      <li>It builds with a bite that does not already occur in the algorithm</li>
+      <li>Originally proposed in 1994 as a data compression algorithm</li>
+    </ul>
+    <div style="margin-top:.8rem;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent2)">
+      Step 01: explore ab (assuming z is not already used)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ Replace aa with new symbol z : aaabac<br>
+      Step 02: Next most frequent pair is 'ab' (assuming z) → zab → zabyac<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;compressed output: zdzyac 2dyac
+    </div>
+  </div>
+
+  <div class="sub-h">Only Byte Pair ID is Stored</div>
+  <p>The byte pair ID <strong>HA</strong> is to be stored. Only byte pair information:</p>
+  <div class="token-row">
+    <div class="tok">do</div><div class="pipe-arrow">→</div>
+    <div class="tok">not</div><div class="pipe-arrow">→</div>
+    <div class="tok">work</div><div class="pipe-arrow">→</div>
+    <div class="tok">it</div>
+  </div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-top:.6rem">
+    Splitting into characters and counting frequencies → splitting further if needed
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 07 — BPE ALGORITHM -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="bpe-algo">
+  <div class="sec-tag">07 — BPE Algorithm</div>
+  <h2>BPE Algorithm: Step-by-Step</h2>
+
+  <p class="sec-intro">The BPE algorithm is iterative. It looks at the token pair frequency table and merges the most frequent adjacent pair at each iteration until a stopping criterion is reached.</p>
+
+  <div class="sub-h">Purpose of BPE in LLMs</div>
+  <div class="pipeline">
+    <div class="pipe-box accent">Raw Text</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box">Split to Characters</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">Count Pair Frequencies</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">Merge Most Frequent Pair</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Update Table</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box">Repeat</div>
+  </div>
+
+  <div class="sub-h">Iterative Merging Steps</div>
+  <div class="card-grid">
+    <div class="card blue">
+      <div class="card-title">Step 1 — Preprocessing</div>
+      <p>Add the end of word follow <code><span class="sptok red">&lt;|w|&gt;</span></code> to mark word boundaries. Splitting into characters and count frequencies.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">Step 2 — Find Best Pair</div>
+      <p>Find the most frequent adjacent pair choices from the frequency table.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Step 3 — Merge</div>
+      <p>Merge the best pair into a new token. Update the frequency table.</p>
+    </div>
+    <div class="card red">
+      <div class="card-title">Step 4 — Repeat</div>
+      <p>Repeat until: desired vocabulary size is reached OR a fix number of merges is completed OR most frequent pair is 0.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Iterative Merging in BPE Algorithm</div>
+  <p>In BPE algorithm, after getting the token frequency table, the next step looks for the most frequent pair mergings:</p>
+  <div class="ibox">
+    <div class="ibox-title">BPE Iteration — Core Steps</div>
+    <ol style="padding-left:1.3rem;color:var(--muted);line-height:2">
+      <li style="color:var(--text)"><strong>Find the most frequent adjacent pair</strong> — from the frequency table</li>
+      <li style="color:var(--text)"><strong>Merge that pair into a new token</strong> — update the table</li>
+      <li style="color:var(--text)"><strong>Update the frequency table</strong></li>
+      <li style="color:var(--text)"><strong>Repeat</strong> until desired vocabulary size is reached</li>
+    </ol>
+    <div class="note" style="margin-top:.8rem">
+      <div class="note-label">Iteration 1 — Most Frequent Pair</div>
+      <p>Often <code>t</code> and <code>h</code> appear together very frequently. Let us consider the below dataset of words.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Example Dataset</div>
+  <p>Let us consider the below dataset of words:</p>
+  <table>
+    <tr><th>No.</th><th>Token</th><th>Frequency</th></tr>
+    <tr><td class="val">1</td><td><span class="sptok red">&lt;|w|&gt;</span></td><td class="accent">23</td></tr>
+    <tr><td class="val">2</td><td>l</td><td class="accent">23</td></tr>
+    <tr><td class="val">3</td><td>o</td><td class="blue">16</td></tr>
+    <tr><td class="val">4</td><td>w</td><td class="blue">16</td></tr>
+    <tr><td class="val">5</td><td>e</td><td class="val">14</td></tr>
+    <tr><td class="val">6</td><td>r</td><td class="val">10 (16−?)</td></tr>
+    <tr><td class="val">7</td><td>n</td><td class="val">9</td></tr>
+    <tr><td class="val">8</td><td>f</td><td class="val">9</td></tr>
+    <tr><td class="val">9</td><td>i</td><td class="val">9</td></tr>
+    <tr><td class="val">10</td><td>s</td><td class="val">13</td></tr>
+    <tr><td class="val">11</td><td>t</td><td class="val">13 (13−?=0)</td></tr>
+    <tr><td class="val">12</td><td>w</td><td class="val">4 5</td></tr>
+  </table>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 08 — BPE ITERATIONS WALKTHROUGH -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="bpe-iters">
+  <div class="sec-tag">08 — BPE Iterations</div>
+  <h2>BPE Iterations: Detailed Walk-Through</h2>
+
+  <p class="sec-intro">This is a full worked example of BPE with 5 iterations. Each iteration finds the most frequent adjacent token pair, merges it, and updates the token frequency table. Follow each step carefully.</p>
+
+  <!-- Interactive Step Navigator -->
+  <div class="ibox">
+    <div class="ibox-title">BPE Walk-Through — Step by Step</div>
+
+    <!-- ITER 02 -->
+    <div class="step on" id="bpe-step-1">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent2);margin-bottom:.8rem;letter-spacing:1px">ITERATION 02 — Merge <span class="sptok red">&lt;|w|&gt;</span> + es → most frequent pair</div>
+      <p style="font-size:.875rem;color:var(--muted);margin-bottom:.8rem">After merging the initial pair (t+h or similar), the next highest-frequency adjacent pair is identified. We merge the pair that appears together most — marked by their combined frequency count.</p>
+      <table>
+        <tr><th>No.</th><th>Token</th><th>Freq</th><th>No.</th><th>Token</th><th>Freq</th></tr>
+        <tr><td>1</td><td><span class="sptok red">&lt;|w|&gt;</span></td><td class="accent">16</td><td>8</td><td>d</td><td>10</td></tr>
+        <tr><td>2</td><td>es</td><td class="accent">16</td><td>9</td><td>i</td><td>9</td></tr>
+        <tr><td>3</td><td>t</td><td class="blue">14</td><td>10</td><td>n</td><td>9</td></tr>
+        <tr><td>4</td><td>s</td><td class="blue">13</td><td>11</td><td>l</td><td>b−3=0</td></tr>
+        <tr><td>5</td><td>r</td><td class="val">9</td><td>12</td><td>13−18=0</td><td class="green">13</td></tr>
+        <tr><td>6</td><td>e</td><td class="val">9</td><td>13</td><td>es</td><td class="accent">13</td></tr>
+        <tr><td>7</td><td>f</td><td class="val">9</td><td>—</td><td>dine</td><td>22</td></tr>
+      </table>
+      <div class="hl warn" style="margin-top:.8rem">
+        <strong>Iteration No. 02:</strong> merge the token <code>es</code> and <code><span class="sptok red">&lt;|w|&gt;</span></code> as they appear together 13 times in our dataset.
+      </div>
+    </div>
+
+    <!-- ITER 03 -->
+    <div class="step" id="bpe-step-2">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent2);margin-bottom:.8rem;letter-spacing:1px">ITERATION 03 — Let us look at the <span class="sptok red">&lt;|w|&gt;</span> token</div>
+      <p style="font-size:.875rem;color:var(--muted);margin-bottom:.8rem">Now let us look at the <code><span class="sptok red">&lt;|w|&gt;</span></code> token — we see that it appears 13 times. This is the most frequent pair in iteration 3.</p>
+      <table>
+        <tr><th>No.</th><th>Token</th><th>Freq</th><th>No.</th><th>Token</th><th>Freq</th></tr>
+        <tr><td>1</td><td><span class="sptok red">&lt;|w|&gt;</span></td><td class="accent">q+4=18</td><td>9</td><td>w</td><td class="val">9+40=49</td></tr>
+        <tr><td>2</td><td>d</td><td class="val">16</td><td>10</td><td>t</td><td class="val">15=10=4</td></tr>
+        <tr><td>3</td><td>o</td><td class="val">14</td><td>11</td><td>16−10=6</td><td></td></tr>
+        <tr><td>4</td><td>s</td><td class="val">4</td><td>12</td><td>16−10=4</td><td></td></tr>
+        <tr><td>5</td><td>r</td><td class="val">9</td><td>13</td><td>es</td><td class="green">16−13=3</td></tr>
+        <tr><td>6</td><td>e</td><td class="val">9</td><td>14</td><td>est</td><td class="accent">13</td></tr>
+        <tr><td>7</td><td>f</td><td class="val">3</td><td>15</td><td>est<span class="sptok red">&lt;|w|&gt;</span></td><td class="blue">16−13=3</td></tr>
+        <tr><td>8</td><td>b</td><td class="val">b−3=0</td><td>16</td><td></td><td></td></tr>
+      </table>
+      <div class="hl" style="margin-top:.8rem">
+        <strong>Iteration No. 03:</strong> <code><span class="sptok red">&lt;|w|&gt;</span></code> token we see that it appears 13 times. Now let us look at the <code>est<span class="sptok red">&lt;|w|&gt;</span></code> appears 13 times!
+      </div>
+    </div>
+
+    <!-- ITER 04 -->
+    <div class="step" id="bpe-step-3">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent2);margin-bottom:.8rem;letter-spacing:1px">ITERATION 04 — Understand the algorithm: find the difference between estimate and position markers</div>
+      <p style="font-size:.875rem;color:var(--muted);margin-bottom:.8rem">BPE helps the algorithm to understand the difference between: estimate and position markers (highest position markers). <code>o</code> and <code>l</code> has appeared 10 times.</p>
+      <table>
+        <tr><th>No.</th><th>Token</th><th>Freq</th><th>No.</th><th>Token</th><th>Freq</th></tr>
+        <tr><td>1</td><td>a</td><td class="val">23−13=10</td><td>9</td><td>h</td><td class="val">18−13=0</td></tr>
+        <tr><td>2</td><td>d</td><td class="val">16</td><td>10</td><td>f</td><td class="val">14</td></tr>
+        <tr><td>3</td><td>o</td><td class="val">16</td><td>11</td><td>est<span class="sptok red">&lt;|w|&gt;</span></td><td class="blue">16−10=6</td></tr>
+        <tr><td>4</td><td>w</td><td class="val">3−3=0</td><td>12</td><td>10−10=4</td><td></td></tr>
+        <tr><td>5</td><td>r</td><td class="val">18−13=0</td><td>13</td><td>18−13=0</td><td></td></tr>
+        <tr><td>6</td><td>f.</td><td class="val">3</td><td>14</td><td>10−10=38=0</td><td></td></tr>
+        <tr><td>7</td><td>n</td><td class="val">9</td><td>15</td><td>19−19=0</td><td></td></tr>
+        <tr><td>8</td><td>b</td><td class="val">18−13=0</td><td>16</td><td>e±k<span class="sptok red">&lt;|w|&gt;</span></td><td class="accent">+13=10</td></tr>
+      </table>
+      <div class="hl warn" style="margin-top:.8rem">
+        <strong>Iteration No. 04:</strong> <code>o</code> and <code>l</code> has appeared 10 times — this is the highest position marker pair in this iteration.
+      </div>
+    </div>
+
+    <!-- ITER 05 -->
+    <div class="step" id="bpe-step-4">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent2);margin-bottom:.8rem;letter-spacing:1px">ITERATION 05 — ol and d' appears 9 times; let us construct the final table</div>
+      <p style="font-size:.875rem;color:var(--muted);margin-bottom:.8rem">In Iteration 05: <code>ol</code> and <code>d'</code> appears 9 times but we just have one word with those characters — so we are not merging. Let us remove the token with zero count and construct the final table.</p>
+      <table>
+        <tr><th>No.</th><th>Token</th><th>Freq</th></tr>
+        <tr><td>1</td><td><span class="sptok red">&lt;|w|&gt;</span></td><td class="val">23−12=10</td></tr>
+        <tr><td>2</td><td>14−12=10</td><td></td></tr>
+        <tr><td>3</td><td>d</td><td class="val">14−10=4</td></tr>
+        <tr><td>4</td><td>s</td><td class="val">13−12=0</td></tr>
+        <tr><td>5</td><td>r</td><td class="val">9+40=0</td></tr>
+        <tr><td>6</td><td>est</td><td class="accent">13</td></tr>
+        <tr><td>7</td><td>d'</td><td class="val">b−10=0</td></tr>
+        <tr><td>8</td><td>13−10=0</td><td></td></tr>
+        <tr><td>9</td><td>13−12=0</td><td></td></tr>
+        <tr><td>10</td><td>old</td><td class="val">10</td></tr>
+        <tr><td>11</td><td>e±t</td><td class="blue">18−13=0</td></tr>
+        <tr><td>12</td><td>+13=10</td><td class="accent">13</td></tr>
+      </table>
+      <div class="hl red" style="margin-top:.8rem">
+        <strong>Note:</strong> <code>f, i, l'</code> appears 9 times but we just have one word with those characters so we are not merging them.
+      </div>
+    </div>
+
+    <!-- FINAL TABLE -->
+    <div class="step" id="bpe-step-5">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent4);margin-bottom:.8rem;letter-spacing:1px">FINAL TABLE — Only contains tokens with frequency ≥ 0</div>
+      <p style="font-size:.875rem;color:var(--muted);margin-bottom:.8rem">After removing all zero-count entries, the final vocabulary table is constructed. This final list of tokens serves as BPE vocabulary after the desired number of merge iterations.</p>
+      <table>
+        <tr><th>No.</th><th>Token</th><th>Frequency</th></tr>
+        <tr><td>1</td><td><span class="sptok red">&lt;|w|&gt;</span></td><td class="accent">10</td></tr>
+        <tr><td>2</td><td>d</td><td class="val">4</td></tr>
+        <tr><td>3</td><td>a</td><td class="val">9</td></tr>
+        <tr><td>4</td><td>r</td><td class="val">3</td></tr>
+        <tr><td>5</td><td>f</td><td class="val">3</td></tr>
+        <tr><td>6</td><td>h</td><td class="val">3</td></tr>
+        <tr><td>7</td><td>w</td><td class="val">3</td></tr>
+        <tr><td>8</td><td>c</td><td class="val">3</td></tr>
+        <tr><td>9</td><td>n</td><td class="val">9</td></tr>
+        <tr><td>10</td><td>est<span class="sptok red">&lt;|w|&gt;</span></td><td class="blue">13</td></tr>
+        <tr><td>11</td><td>old</td><td class="green">10</td></tr>
+      </table>
+      <div class="hl success" style="margin-top:.8rem">
+        <strong>Final table only contains the tokens with frequency ≥ 0</strong> — this is the BPE vocabulary. The vocabulary after the desired number of merges serves as the BPE token set.
+      </div>
+    </div>
+
+    <div class="step-ctrl">
+      <button class="btn" onclick="stepNav('bpe-step', 1, 5, -1)">← Prev</button>
+      <span class="step-idx" id="bpe-step-idx">Step 1 of 5</span>
+      <button class="btn" onclick="stepNav('bpe-step', 1, 5, 1)">Next →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 09 — BPE IN PRACTICE -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="bpe-practice">
+  <div class="sec-tag">09 — BPE in Practice</div>
+  <h2>BPE in Practice & Stopping Criteria</h2>
+
+  <p class="sec-intro">How BPE is actually used in production LLMs — stopping criteria, the tiktoken library, and the final vocabulary structure.</p>
+
+  <div class="sub-h">Stopping Criteria for BPE</div>
+  <div class="card-grid">
+    <div class="card amber">
+      <div class="card-title">Fixed Vocabulary Size</div>
+      <p>A fixed vocabulary size is set (e.g. GPT-2 uses 50,257). BPE stops when this many tokens are in the vocabulary.</p>
+    </div>
+    <div class="card blue">
+      <div class="card-title">Maximum Merge Count</div>
+      <p>A maximum number of merge iterations is defined. BPE runs that many merges regardless of vocabulary size.</p>
+    </div>
+    <div class="card red">
+      <div class="card-title">Zero Frequency</div>
+      <p>Often automatically triggers — when the most frequent pair has frequency 0, no more merging is possible. Final table only contains tokens with frequency ≥ 0.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">BPE Library: tiktoken</div>
+  <div class="callout" data-label="OpenAI's tiktoken">
+    <p><strong>tiktoken</strong> is a Python library that implements BPE tokenization used in GPT-2, GPT-3, and GPT-4.</p>
+    <ul style="padding-left:1.2rem;color:var(--muted);font-size:.875rem;margin-top:.5rem">
+      <li>Library: <code>tiktoken</code> implements BPE tokenization</li>
+      <li>Used in GPT-2, GPT-3, original ChatGPT model, GPT-4</li>
+      <li>Open provides a Python library called <code>#tiktoken</code></li>
+    </ul>
+    <div class="hl" style="margin-top:.8rem">
+      → Only contains tokens with frequency ≥ 0<br>
+      → Final table only contains the token (with frequencies ≥ 0)
+    </div>
+  </div>
+
+  <div class="sub-h">Comparing Tokenization Methods</div>
+  <table>
+    <tr><th>Method</th><th>Vocab Size</th><th>OOV Problem</th><th>Seq Length</th><th>Used In</th></tr>
+    <tr><td class="val">Word-Based</td><td>Very Large</td><td class="accent">Severe</td><td>Short</td><td>Early NLP</td></tr>
+    <tr><td class="val">Char-Based</td><td class="green">Very Small</td><td class="green">None</td><td class="accent">Very Long</td><td>Some models</td></tr>
+    <tr><td class="val">Subword (BPE)</td><td class="blue">Medium</td><td class="blue">Minimal</td><td class="blue">Medium</td><td class="green">GPT-2/3/4, BERT</td></tr>
+  </table>
+
+  <div class="sub-h">Key BPE Properties</div>
+  <div class="two-col">
+    <div class="hl success">
+      <strong>Handles morphology:</strong> Words like "low", "lower", "lowest" share the root <code>low</code> as a common subword token. The model learns morphological relationships.
+    </div>
+    <div class="hl">
+      <strong>Data-driven:</strong> BPE vocabulary is learned entirely from data — frequent patterns in the training corpus get merged first. The vocabulary reflects the actual language distribution.
+    </div>
+  </div>
+
+  <div class="note">
+    <div class="note-label">Iteration 1 Summary</div>
+    <p>Iteration 1: Most frequent pair — often analyzing the token frequency. A fix number of merges is completed. After analyzing the token frequency, we often use the "est<span class="sptok red">&lt;|w|&gt;</span>" token we see that it appears 13 times — then determine most frequent pair is (es).</p>
+  </div>
+
+  <hr class="div-line"/>
+
+  <div class="callout" data-label="Summary">
+    <h3 style="font-family:'DM Serif Display',serif;margin-bottom:.6rem">Tokenization Pipeline Summary</h3>
+    <div class="pipeline" style="flex-wrap:wrap">
+      <div class="pipe-box accent">Raw Text</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-box">Split / Regex</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-box blue">BPE / Word / Char</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-box amber">Vocabulary Lookup</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-box green">Token IDs</div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-box">Embeddings → LM</div>
+    </div>
+    <div style="margin-top:1rem;display:flex;flex-wrap:wrap;gap:.4rem">
+      <span class="tag red">BPE</span>
+      <span class="tag">tiktoken</span>
+      <span class="tag green">GPT-2/3/4</span>
+      <span class="tag amber">Subword</span>
+      <span class="tag">Vocabulary</span>
+      <span class="tag red">Token IDs</span>
+      <span class="tag">Embeddings</span>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+// ── Progress Bar ──
+const prog = document.getElementById('prog');
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const pct = (window.scrollY / (h.scrollHeight - h.clientHeight)) * 100;
+  prog.style.width = pct + '%';
+});
+
+// ── Reveal on scroll ──
+const revealEls = document.querySelectorAll('.reveal');
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('show'); });
+}, { threshold: 0.08 });
+revealEls.forEach(el => revealObs.observe(el));
+
+// ── Nav active state ──
+const sections = document.querySelectorAll('section.sec[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+const navObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting) {
+      navLinks.forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id);
+      });
+    }
+  });
+}, { rootMargin: '-40% 0px -50% 0px' });
+sections.forEach(s => navObs.observe(s));
+
+// ── Step Navigator ──
+const stepState = {};
+function stepNav(prefix, min, max, dir) {
+  if(!stepState[prefix]) stepState[prefix] = min;
+  const cur = stepState[prefix];
+  const el = document.getElementById(prefix + '-' + cur);
+  if(el) el.classList.remove('on');
+  let next = cur + dir;
+  if(next < min) next = max;
+  if(next > max) next = min;
+  stepState[prefix] = next;
+  const nextEl = document.getElementById(prefix + '-' + next);
+  if(nextEl) nextEl.classList.add('on');
+  const idx = document.getElementById(prefix + '-idx');
+  if(idx) idx.textContent = 'Step ' + next + ' of ' + max;
+}
+
+// ── KaTeX render ──
+document.addEventListener('DOMContentLoaded', () => {
+  renderMathInElement(document.body, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '$', right: '$', display: false }
+    ],
+    throwOnError: false
+  });
+});
+</script>
+</body>
+</html>

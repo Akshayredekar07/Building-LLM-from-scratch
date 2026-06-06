@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LM Input-Target Pairs · Token Embeddings · Positional Encoding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+:root {
+  --bg:        #0d1117;
+  --bg2:       #161b22;
+  --bg3:       #1c2128;
+  --bg4:       #21262d;
+  --text:      #e6edf3;
+  --muted:     #8b949e;
+  --accent:    #f78166;
+  --accent2:   #d29922;
+  --accent3:   #58a6ff;
+  --accent4:   #3fb950;
+  --border:    #30363d;
+  --highlight: #1f2937;
+  --grad-accent: linear-gradient(135deg,#f78166 0%,#d29922 100%);
+  --grad-blue:   linear-gradient(135deg,#58a6ff 0%,#3fb950 100%);
+  --grad1:     linear-gradient(135deg,#1c2128 0%,#161b22 100%);
+  --card-glow: 0 0 0 1px #30363d, 0 4px 24px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.75;min-height:100vh;}
+
+/* Progress */
+#prog{position:fixed;top:0;left:0;height:3px;background:var(--grad-accent);z-index:300;width:0;transition:width .1s}
+
+/* Nav */
+nav{position:fixed;top:3px;left:0;right:0;background:rgba(13,17,23,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0;padding:0 2rem;height:48px;z-index:200;}
+.nav-brand{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;background:var(--grad-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-right:2rem;white-space:nowrap;flex-shrink:0;}
+.nav-links{display:flex;gap:2px;overflow-x:auto;flex:1}
+.nav-links::-webkit-scrollbar{height:0}
+.nav-links a{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:6px;border:1px solid transparent;white-space:nowrap;transition:all .2s;}
+.nav-links a:hover,.nav-links a.active{color:var(--accent);background:rgba(247,129,102,.08);border-color:rgba(247,129,102,.3);}
+
+/* Main */
+main{max-width:920px;margin:0 auto;padding:80px 2rem 80px}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:1.1fr 0.9fr;gap:3rem;padding:3rem 0 3.5rem;border-bottom:1px solid var(--border);margin-bottom:4rem;}
+.hero h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,5vw,4.6rem);line-height:1;letter-spacing:2px;color:var(--text);}
+.hero h1 span{background:var(--grad-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-right{padding-top:.5rem}
+.hero-right p{font-family:'DM Serif Display',serif;font-style:italic;font-size:1.05rem;color:var(--muted);line-height:1.6;}
+.hero-meta{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.5px;color:var(--muted);margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border);}
+.hero-meta span{color:var(--accent3);margin-right:.5rem}
+
+/* Section */
+.sec{margin-bottom:5rem}
+.sec-tag{font-family:'JetBrains Mono',monospace;font-size:13.5px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;margin-bottom:.6rem;}
+.sec h2{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:1px;color:var(--text);margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:.6rem;}
+.sec h3{font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--text);margin:1.5rem 0 .6rem;}
+.sec p{color:var(--muted);margin-bottom:.9rem}
+
+/* Reveal */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .5s,transform .5s}
+.reveal.show{opacity:1;transform:none}
+
+/* Highlight Box */
+.hl{background:rgba(88,166,255,.07);border:1px solid rgba(88,166,255,.2);border-radius:8px;padding:1rem 1.2rem;margin:1rem 0;color:var(--text);}
+.hl.warn{border-color:rgba(210,153,34,.25);background:rgba(210,153,34,.07)}
+.hl.success{border-color:rgba(63,185,80,.25);background:rgba(63,185,80,.07)}
+.hl.red{border-color:rgba(247,129,102,.25);background:rgba(247,129,102,.07)}
+.hl strong{color:var(--accent3);font-weight:600}
+.hl.warn strong{color:var(--accent2)}
+.hl.success strong{color:var(--accent4)}
+.hl.red strong{color:var(--accent)}
+
+/* Callout */
+.callout{border:1px solid var(--border);border-radius:8px;padding:1.2rem 1.2rem 1rem;margin:1.2rem 0;background:var(--bg2);position:relative;}
+.callout::before{content:attr(data-label);position:absolute;top:-10px;left:12px;background:var(--bg2);padding:0 8px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;border:1px solid var(--border);border-radius:4px;}
+
+/* Pipeline */
+.pipeline{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin:1.2rem 0;padding:1rem;background:var(--bg2);border-radius:8px;border:1px solid var(--border);}
+.pipe-box{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:.4rem .8rem;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text);white-space:nowrap;}
+.pipe-box.accent{background:rgba(247,129,102,.15);border-color:var(--accent);color:var(--accent)}
+.pipe-box.blue{background:rgba(88,166,255,.12);border-color:var(--accent3);color:var(--accent3)}
+.pipe-box.green{background:rgba(63,185,80,.12);border-color:var(--accent4);color:var(--accent4)}
+.pipe-box.amber{background:rgba(210,153,34,.12);border-color:var(--accent2);color:var(--accent2)}
+.pipe-arrow{color:var(--muted);font-size:1rem}
+
+/* Math Block */
+.mb{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.2rem 1.4rem;margin:1rem 0;overflow-x:auto;color:#f9e9c8;}
+
+/* Cards */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.1rem;box-shadow:var(--card-glow);transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-2px);box-shadow:0 0 0 1px #30363d,0 8px 32px rgba(0,0,0,.5)}
+.card.blue{border-color:rgba(88,166,255,.3)}
+.card.green{border-color:rgba(63,185,80,.3)}
+.card.amber{border-color:rgba(210,153,34,.3)}
+.card.red{border-color:rgba(247,129,102,.3)}
+.card-title{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin-bottom:.6rem;font-weight:600;}
+.card.blue .card-title{color:var(--accent3)}
+.card.green .card-title{color:var(--accent4)}
+.card.amber .card-title{color:var(--accent2)}
+.card p{font-size:.875rem;color:var(--muted);margin:0}
+.card ul{padding-left:1.1rem;color:var(--muted);font-size:.875rem}
+.card ul li{margin-bottom:.3rem}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:12.5px;margin:1rem 0;background:var(--bg2);border-radius:8px;overflow:hidden;border:1px solid var(--border);}
+th{background:var(--bg3);color:#f9e9c8;padding:.65rem 1rem;text-align:left;font-weight:600;border-bottom:1px solid var(--border);letter-spacing:.5px;font-size:11px;}
+td{padding:.55rem 1rem;border-bottom:1px solid var(--border);color:var(--muted)}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+td.val{color:var(--text);font-weight:600}
+td.accent{color:var(--accent)}
+td.blue{color:var(--accent3)}
+td.green{color:var(--accent4)}
+td.amber{color:var(--accent2)}
+
+/* iBox */
+.ibox{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.4rem;margin:1.2rem 0;box-shadow:var(--card-glow);}
+.ibox-title{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);padding-bottom:.7rem;margin-bottom:1rem;}
+
+/* Code block */
+.code-block{background:#010409;border:1px solid var(--border);border-radius:8px;margin:1rem 0;overflow:hidden;}
+.code-header{background:var(--bg3);padding:.5rem 1rem;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--accent2);}
+.code-copy{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;background:none;border:1px solid var(--border);border-radius:4px;padding:.2rem .6rem;transition:all .2s;}
+.code-copy:hover{color:var(--text);border-color:var(--muted)}
+pre{padding:1.2rem;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.7;color:#e6edf3;margin:0;}
+.kw{color:#ff7b72}   /* keyword */
+.fn{color:#d2a8ff}   /* function */
+.st{color:#a5d6ff}   /* string */
+.cm{color:#6e7681;font-style:italic}  /* comment */
+.nu{color:#79c0ff}   /* number */
+.cl{color:#ffa657}   /* class */
+.op{color:#ff7b72}   /* operator */
+.id2{color:#3fb950}  /* identifier/green */
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:.4rem;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:11px;padding:.45rem .9rem;cursor:pointer;letter-spacing:.3px;transition:all .2s;}
+.btn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* code inline */
+code{font-family:'JetBrains Mono',monospace;font-size:.82em;background:rgba(88,166,255,.1);color:var(--accent3);padding:.1em .4em;border-radius:4px;border:1px solid rgba(88,166,255,.2);}
+
+/* Two-col */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin:1rem 0}
+
+/* Sub heading */
+.sub-h{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent3);margin:1.4rem 0 .5rem;display:flex;align-items:center;gap:.5rem;}
+.sub-h::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* Note */
+.note{background:rgba(210,153,34,.06);border:1px solid rgba(210,153,34,.2);border-radius:8px;padding:.9rem 1.1rem;margin:.8rem 0;}
+.note-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--accent2);text-transform:uppercase;margin-bottom:.4rem;font-weight:700;}
+.note p{color:var(--muted);font-size:.875rem;margin:0}
+
+/* Divider */
+.div-line{border:none;border-top:1px solid var(--border);margin:2rem 0}
+
+/* Tag pills */
+.tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;padding:.2rem .6rem;border-radius:100px;background:rgba(88,166,255,.1);color:var(--accent3);border:1px solid rgba(88,166,255,.25);margin:.1rem;}
+.tag.red{background:rgba(247,129,102,.1);color:var(--accent);border-color:rgba(247,129,102,.25)}
+.tag.green{background:rgba(63,185,80,.1);color:var(--accent4);border-color:rgba(63,185,80,.25)}
+.tag.amber{background:rgba(210,153,34,.1);color:var(--accent2);border-color:rgba(210,153,34,.25)}
+
+/* sec-intro */
+.sec-intro{color:var(--muted);font-size:.95rem;margin-bottom:1.5rem;}
+
+/* Matrix visual */
+.mat-wrap{display:flex;align-items:center;gap:1rem;margin:1rem 0;flex-wrap:wrap;}
+.mat{border-left:3px solid var(--accent3);border-right:3px solid var(--accent3);padding:.5rem 1rem;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);background:var(--bg2);border-radius:0 6px 6px 0;}
+.mat-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:.3rem;letter-spacing:.5px;}
+.mat-row{display:flex;gap:.5rem;margin:.2rem 0;}
+.mat-cell{min-width:60px;padding:.2rem .4rem;text-align:center;border:1px solid var(--border);border-radius:3px;background:var(--bg3);font-size:11.5px;}
+.mat-cell.hl-cell{background:rgba(88,166,255,.15);border-color:var(--accent3);color:var(--accent3)}
+.mat-cell.hl-cell2{background:rgba(63,185,80,.15);border-color:var(--accent4);color:var(--accent4)}
+.mat-cell.hl-cell3{background:rgba(247,129,102,.15);border-color:var(--accent);color:var(--accent)}
+
+/* Token row visual */
+.tok-vis{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin:.6rem 0;}
+.tok-box{display:inline-flex;align-items:center;justify-content:center;min-width:2.6rem;padding:.3rem .65rem;border:1px solid var(--border);border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--bg3);color:var(--text);font-weight:600;}
+.tok-box.input{background:rgba(88,166,255,.12);border-color:var(--accent3);color:var(--accent3)}
+.tok-box.target{background:rgba(247,129,102,.12);border-color:var(--accent);color:var(--accent)}
+.tok-box.id{background:rgba(210,153,34,.12);border-color:var(--accent2);color:var(--accent2)}
+.tok-box.emb{background:rgba(63,185,80,.12);border-color:var(--accent4);color:var(--accent4)}
+.tok-arrow{color:var(--muted);font-size:1rem;margin:0 .2rem}
+.tok-label{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);min-width:100px;}
+
+/* Sliding window visual */
+.sw-row{display:flex;gap:.3rem;margin:.4rem 0;align-items:center;}
+.sw-cell{width:38px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--bg3);color:var(--muted);}
+.sw-cell.win{background:rgba(88,166,255,.15);border-color:var(--accent3);color:var(--accent3)}
+.sw-cell.tgt{background:rgba(247,129,102,.15);border-color:var(--accent);color:var(--accent)}
+.sw-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);min-width:80px;letter-spacing:.3px;}
+
+/* Emb grid */
+.emb-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;width:80px;}
+.emb-cell{height:12px;border-radius:2px;}
+
+/* Step */
+.step{display:none;animation:fadeUp .3s ease}
+.step.on{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.step-ctrl{display:flex;align-items:center;gap:.6rem;margin-top:1rem}
+.step-idx{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin:0 .4rem}
+
+/* Responsive */
+@media(max-width:600px){
+  .hero{grid-template-columns:1fr}
+  .two-col{grid-template-columns:1fr}
+  nav{padding:0 1rem}
+  main{padding:80px 1rem 60px}
+}
+</style>
+</head>
+<body>
+
+<div id="prog"></div>
+
+<nav>
+  <div class="nav-brand">LM INTERNALS</div>
+  <div class="nav-links">
+    <a href="#input-target">Input-Target Pairs</a>
+    <a href="#dataloader">DataLoader</a>
+    <a href="#tok-embedding">Token Embedding</a>
+    <a href="#vocab-emb">Vocab Embedding NN</a>
+    <a href="#emb-layer">Embedding Layer</a>
+    <a href="#pos-enc">Positional Encoding</a>
+    <a href="#abs-pe">Absolute PE</a>
+    <a href="#rel-pe">Relative PE</a>
+    <a href="#gpt2-arch">GPT-2 Architecture</a>
+  </div>
+</nav>
+
+<main>
+
+<!-- HERO -->
+<div class="hero">
+  <div>
+    <h1>LM <span>EMBEDDINGS</span><br>&amp; POSITIONAL<br>ENCODING</h1>
+  </div>
+  <div class="hero-right">
+    <p>How input-target pairs are created, fed through a DataLoader, converted to token embeddings, and augmented with positional information before entering a language model.</p>
+    <div class="hero-meta">
+      <span>Sections: 9</span> | <span>Part 2 of Tokenization Notes</span> | <span>Covers: GPT-2 internals</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 10 — INPUT-TARGET PAIR GENERATION -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="input-target">
+  <div class="sec-tag">10 — Input-Target Pair Generation</div>
+  <h2>Input-Target Pair Generation</h2>
+
+  <p class="sec-intro">Before training an LLM, we need to create <em>input-target pairs</em> — each pair teaches the model to predict the next word given a context window. This is the fundamental self-supervised learning setup for all autoregressive language models.</p>
+
+  <div class="sub-h">Last Step Before Data Sampling</div>
+  <p>The previous step (tokenization) gave us a flat sequence of token IDs. The data preparation pipeline adds one final step: <strong>creating input-target pairs</strong>. These are passed to the model during training.</p>
+
+  <div class="pipeline">
+    <div class="pipe-box accent">Raw Text</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">Tokenise</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">Token IDs</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Input-Target Pairs</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box">LLM Training</div>
+  </div>
+
+  <div class="sub-h">What do Input-Target Pairs look like?</div>
+  <p>Given a sequence of tokens, we slide a window of size <code>context_size</code> across the token stream. For each window position, the <strong>input</strong> is the window and the <strong>target</strong> is the same window shifted by one position to the right.</p>
+
+  <div class="callout" data-label="Example Sentence">
+    <p style="font-size:.9rem;margin-bottom:.8rem">Example corpus: <code>"The old city stood, the old library, a relic from the bygone era"</code></p>
+    <div class="sub-h" style="margin-top:.6rem">How LLMs learn to predict target word one-at-a-time</div>
+    <table>
+      <tr><th>Step</th><th>Input Context</th><th>Target (next word)</th></tr>
+      <tr><td class="amber">lm</td><td>learns to predict</td><td class="accent">one word at a time</td></tr>
+      <tr><td class="amber">lm</td><td>learns to predict one</td><td class="accent">word at a time</td></tr>
+      <tr><td class="amber">lm</td><td>learns to predict one word</td><td class="accent">at a time</td></tr>
+      <tr><td class="amber">lm</td><td>learns to predict one word at</td><td class="accent">a time</td></tr>
+      <tr><td class="amber">lm</td><td>learns to predict one word at a</td><td class="accent">time</td></tr>
+      <tr><td class="amber">lm</td><td>learns to predict one word at a time</td><td class="accent">context exceeded</td></tr>
+    </table>
+    <div class="hl success" style="margin-top:.8rem">
+      <strong>Key insight:</strong> Each step, we predict ONE word. The input grows by one token each step, until it fills the context window. Then the window slides.
+    </div>
+  </div>
+
+  <div class="sub-h">LLM Prediction Flow</div>
+  <p>LLMs cannot directly access words as text — they work on <strong>subsamples of text</strong> which are <strong>blocks of tokens</strong>. During training time the model predicts one token at a time from these blocks.</p>
+  <div class="card-grid">
+    <div class="card blue">
+      <div class="card-title">Given a text sample</div>
+      <p>Pass the sample blocks as input to LLM. These LLMs are trained to predict the next word (token).</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">During training</div>
+      <p>We mask out all words, training one word at a time. After each prediction the context grows by one token.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">These LLMs are trained</div>
+      <p>To predict the next token (word) given a context. The model learns word-order relationships from millions of these pairs.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Tensor Construction: x and y</div>
+  <p>The input pair is represented as two tensors: <code>x</code> containing input tokens and <code>y</code> containing target tokens. Both have the same shape — <code>y</code> is just <code>x</code> shifted by one position.</p>
+
+  <div class="ibox">
+    <div class="ibox-title">Input / Target Tensor Example — context_size = 4</div>
+    <p style="color:var(--muted);font-size:.875rem;margin-bottom:1rem">Suppose our token sequence is: <code>[2, 3, 4, 1, 5]</code></p>
+    <div class="mat-wrap">
+      <div>
+        <div class="mat">
+          <div class="mat-row"><div class="mat-cell hl-cell">2</div><div class="mat-cell hl-cell">3</div><div class="mat-cell hl-cell">4</div><div class="mat-cell hl-cell">1</div></div>
+        </div>
+        <div class="mat-label">x = enc_sample[ : context_size]<br>&nbsp;&nbsp;&nbsp;= [2, 3, 4, 1]</div>
+      </div>
+      <div style="color:var(--muted);font-size:1.5rem">→</div>
+      <div>
+        <div class="mat">
+          <div class="mat-row"><div class="mat-cell hl-cell2">3</div><div class="mat-cell hl-cell2">4</div><div class="mat-cell hl-cell2">1</div><div class="mat-cell hl-cell2">5</div></div>
+        </div>
+        <div class="mat-label">y = enc_sample[1 : context_size+1]<br>&nbsp;&nbsp;&nbsp;= [3, 4, 1, 5]</div>
+      </div>
+    </div>
+    <div class="hl warn" style="margin-top:1rem">
+      <strong>Observation:</strong> x[0]=2 → predict y[0]=3 | x[0:2]=[2,3] → predict y[1]=4 | x[0:3]=[2,3,4] → predict y[2]=1 | x[0:4]=[2,3,4,1] → predict y[3]=5. All four training examples packed into one tensor pair!
+    </div>
+  </div>
+
+  <div class="sub-h">Tensor construction with torch.Tensor</div>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Python — Tensor Construction</span><button class="code-copy" onclick="copyCode(this)">copy</button></div>
+    <pre><span class="kw">import</span> torch
+
+<span class="cm"># enc_sample: full list of token IDs</span>
+<span class="cm"># Example: "The city, the old library" → tokenised</span>
+enc_sample = [<span class="nu">2</span>, <span class="nu">3</span>, <span class="nu">4</span>, <span class="nu">1</span>, <span class="nu">5</span>]  <span class="cm"># token ID sequence</span>
+context_size = <span class="nu">4</span>
+
+<span class="cm"># x: input tokens (first context_size tokens)</span>
+x = torch.<span class="fn">tensor</span>(enc_sample[: context_size])
+<span class="cm"># y: target tokens (shifted right by 1)</span>
+y = torch.<span class="fn">tensor</span>(enc_sample[<span class="nu">1</span> : context_size + <span class="nu">1</span>])
+
+<span class="fn">print</span>(<span class="st">"x (input):"</span>,  x)   <span class="cm"># tensor([2, 3, 4, 1])</span>
+<span class="fn">print</span>(<span class="st">"y (target):"</span>, y)   <span class="cm"># tensor([3, 4, 1, 5])</span>
+
+<span class="cm"># Every consecutive pair (x[i], y[i]) is one training example</span>
+<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(x)):
+    <span class="fn">print</span>(<span class="st">f"input: {x[:i+1].tolist()} → target: {y[i].item()}"</span>)</pre>
+  </div>
+
+  <div class="hl">
+    <strong>One of the most intuitive ways to create a next word prediction dataset</strong> is by generating sequences of word predictions. The input context grows by one token each step — but the target is always just one word: the word at the next position.
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 11 — SLIDING WINDOW DATALOADER -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="dataloader">
+  <div class="sec-tag">11 — Sliding Window DataLoader</div>
+  <h2>Sliding Window DataLoader</h2>
+
+  <p class="sec-intro">To feed input-target pairs into a model efficiently, we implement a custom PyTorch <code>Dataset</code> + <code>DataLoader</code> using a <strong>sliding window</strong> approach. The window moves one position at a time across the full tokenised corpus.</p>
+
+  <div class="sub-h">Sliding Window Concept</div>
+  <p>Instead of splitting the corpus into non-overlapping chunks, we slide a window of <code>context_size</code> tokens across the token stream. At each position, we extract one (x, y) pair. This maximises the number of training examples.</p>
+
+  <div class="ibox">
+    <div class="ibox-title">Sliding Window — context_size = 4</div>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:.8rem">Token stream: <code>["The", "city", "stood", "the", "old", "library"]</code> → IDs: <code>[1, 2, 3, 4, 5, 6]</code></p>
+
+    <div style="margin:.6rem 0">
+      <div class="sw-row">
+        <div class="sw-label">Step 1 (x):</div>
+        <div class="sw-cell win">1</div><div class="sw-cell win">2</div><div class="sw-cell win">3</div><div class="sw-cell win">4</div><div class="sw-cell">5</div><div class="sw-cell">6</div>
+      </div>
+      <div class="sw-row">
+        <div class="sw-label">Step 1 (y):</div>
+        <div class="sw-cell">1</div><div class="sw-cell tgt">2</div><div class="sw-cell tgt">3</div><div class="sw-cell tgt">4</div><div class="sw-cell tgt">5</div><div class="sw-cell">6</div>
+      </div>
+    </div>
+    <div style="margin:.6rem 0">
+      <div class="sw-row">
+        <div class="sw-label">Step 2 (x):</div>
+        <div class="sw-cell">1</div><div class="sw-cell win">2</div><div class="sw-cell win">3</div><div class="sw-cell win">4</div><div class="sw-cell win">5</div><div class="sw-cell">6</div>
+      </div>
+      <div class="sw-row">
+        <div class="sw-label">Step 2 (y):</div>
+        <div class="sw-cell">1</div><div class="sw-cell">2</div><div class="sw-cell tgt">3</div><div class="sw-cell tgt">4</div><div class="sw-cell tgt">5</div><div class="sw-cell tgt">6</div>
+      </div>
+    </div>
+    <div class="hl" style="margin-top:.8rem">
+      <strong>Blue = input window (x) | Orange = target window (y)</strong>. Target is always x shifted right by 1.
+    </div>
+  </div>
+
+  <div class="sub-h">DataLoader Implementation</div>
+  <p>The DataLoader encapsulates four steps: tokenise the full text, use a sliding window to chunk input/target, return tensors, and batch them.</p>
+
+  <div class="ibox">
+    <div class="ibox-title">DataLoader Steps</div>
+    <table>
+      <tr><th>Step</th><th>What happens</th><th>Returns</th></tr>
+      <tr><td class="amber">S1</td><td class="val">Tokenise the entire text</td><td>Full token ID list</td></tr>
+      <tr><td class="amber">S2</td><td class="val">Use sliding window to chunk input + target</td><td>x, y pairs of length context_size</td></tr>
+      <tr><td class="amber">S3</td><td class="val"><code>__len__</code> — returns total number of rows in dataset</td><td>Integer (max_length)</td></tr>
+      <tr><td class="amber">S4</td><td class="val"><code>__getitem__</code> — return a single row (x,y pair) from dataset</td><td>Tuple of tensors</td></tr>
+    </table>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Python — GPT Dataset + DataLoader</span><button class="code-copy" onclick="copyCode(this)">copy</button></div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">from</span> torch.utils.data <span class="kw">import</span> Dataset, DataLoader
+<span class="kw">import</span> tiktoken
+<span class="kw">from</span> tqdm <span class="kw">import</span> tqdm
+
+<span class="cm"># Sliding window dataset — generates overlapping (x, y) pairs</span>
+<span class="kw">class</span> <span class="cl">GPTDatasetV1</span>(Dataset):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, txt, tokenizer, max_length, stride):
+        <span class="cm"># S1: tokenise entire text into a flat ID sequence</span>
+        token_ids = tokenizer.<span class="fn">encode</span>(txt, allowed_special={<span class="st">"&lt;|endoftext|&gt;"</span>})
+
+        self.input_ids  = []
+        self.target_ids = []
+
+        <span class="cm"># S2: slide a window of max_length across the token stream</span>
+        <span class="cm"># stride controls how many tokens we advance each step</span>
+        <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="nu">0</span>, <span class="fn">len</span>(token_ids) - max_length, stride):
+            input_chunk  = token_ids[i : i + max_length]
+            target_chunk = token_ids[i + <span class="nu">1</span> : i + max_length + <span class="nu">1</span>]
+            self.input_ids.<span class="fn">append</span>(torch.<span class="fn">tensor</span>(input_chunk))
+            self.target_ids.<span class="fn">append</span>(torch.<span class="fn">tensor</span>(target_chunk))
+
+    <span class="cm"># S3: total number of (x, y) pairs</span>
+    <span class="kw">def</span> <span class="fn">__len__</span>(self):
+        <span class="kw">return</span> <span class="fn">len</span>(self.input_ids)
+
+    <span class="cm"># S4: return one (x, y) pair by index</span>
+    <span class="kw">def</span> <span class="fn">__getitem__</span>(self, idx):
+        <span class="kw">return</span> self.input_ids[idx], self.target_ids[idx]
+
+
+<span class="kw">def</span> <span class="fn">create_dataloader_v1</span>(txt, batch_size=<span class="nu">4</span>, max_length=<span class="nu">256</span>,
+                           stride=<span class="nu">128</span>, shuffle=<span class="kw">True</span>, drop_last=<span class="kw">True</span>):
+    tokenizer = tiktoken.<span class="fn">get_encoding</span>(<span class="st">"gpt2"</span>)
+    dataset   = <span class="cl">GPTDatasetV1</span>(txt, tokenizer, max_length, stride)
+    dataloader = <span class="cl">DataLoader</span>(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        drop_last=drop_last  <span class="cm"># drop incomplete last batch</span>
+    )
+    <span class="kw">return</span> dataloader
+
+<span class="cm"># Usage</span>
+with <span class="fn">open</span>(<span class="st">"the-verdict.txt"</span>, <span class="st">"r"</span>) <span class="kw">as</span> f:
+    raw_text = f.<span class="fn">read</span>()
+
+dataloader = <span class="fn">create_dataloader_v1</span>(raw_text, batch_size=<span class="nu">8</span>,
+                                    max_length=<span class="nu">4</span>, stride=<span class="nu">4</span>)
+
+<span class="cm"># Inspect first batch</span>
+data_iter = <span class="fn">iter</span>(dataloader)
+inputs, targets = <span class="fn">next</span>(data_iter)
+<span class="fn">print</span>(<span class="st">"inputs shape :"</span>, inputs.shape)   <span class="cm"># [8, 4]</span>
+<span class="fn">print</span>(<span class="st">"targets shape:"</span>, targets.shape)  <span class="cm"># [8, 4]</span></pre>
+  </div>
+
+  <div class="sub-h">How the DataLoader Works Internally</div>
+  <div class="card-grid">
+    <div class="card blue">
+      <div class="card-title">Inputs are collected in a tensor</div>
+      <p>Inputs are collected in a tensor where each row corresponds to one input text (context). Rows are collected in a tensor where each row = one context window.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">Sliding Window</div>
+      <p>The sliding window moves one step at a time. The stride parameter controls the overlap: stride=1 creates maximum overlap; stride=max_length creates non-overlapping windows.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Targets created by shifting</div>
+      <p>Send tensor containing the corresponding prediction targets, created by shifting the input by one position. These targets are created by shifting the window one token ahead.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <div class="note-label">Preprocessing note</div>
+    <p>It should return the input and target pairs. To implement an effective data loader — these tensors can be slices of multidimensional array. Inputs are collected in a tensor (where each row = one text). DataLoader depends on input context — each row represents the same token, and inputs are collected in a tensor where each row represents the tokens for prediction.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 12 — TOKEN EMBEDDING -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="tok-embedding">
+  <div class="sec-tag">12 — Token Embedding</div>
+  <h2>Token Embedding for Building a Language Model</h2>
+
+  <p class="sec-intro">After tokenisation we have integer token IDs. But neural networks require continuous numerical inputs. Token embedding converts each discrete integer ID into a dense floating-point vector. This is a necessary foundation for building any language model.</p>
+
+  <div class="sub-h">Why do we need token embeddings?</div>
+  <div class="card-grid">
+    <div class="card red">
+      <div class="card-title">Conceptual Understanding</div>
+      <p>Small models use dense data. Playing with tokens embedding gives us a dense numeric representation of every token — this is the input that the actual neural network layers process.</p>
+    </div>
+    <div class="card blue">
+      <div class="card-title">What are token embeddings created for an LM?</div>
+      <p>We generate pairs — the embedding is created for an LM. At one line, token IDs are constructed at one time and then decoded (masked) to generate them.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Dense Representation</div>
+      <p>One-hot encoding (OHE) assigns sequential numbers — but this is too sparse and does not capture relationships. Embeddings are learned dense vectors that group semantically similar tokens together.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Why NOT One-Hot Encoding (OHE)?</div>
+  <div class="ibox">
+    <div class="ibox-title">OHE vs Dense Embeddings</div>
+    <div class="two-col">
+      <div>
+        <p style="color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;margin-bottom:.5rem">OHE PROBLEMS</p>
+        <div class="hl red">
+          <strong>Issue 1:</strong> Increases dimensionality and assigns sequential numbers — not informative.
+        </div>
+        <div class="hl red" style="margin-top:.5rem">
+          <strong>Issue 2:</strong> Fails to capture semantic meaning and sparse data relationships.
+        </div>
+        <div class="hl red" style="margin-top:.5rem">
+          <strong>Issue 3:</strong> However the number fails to capture the relationship between tokens. For example "cat" OHE = (0,1,0,0,...) and "kitten" OHE = (0,0,1,0,...) — the numbers don't show they are similar.
+        </div>
+      </div>
+      <div>
+        <p style="color:var(--accent4);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;margin-bottom:.5rem">DENSE EMBEDDINGS</p>
+        <p style="color:var(--muted);font-size:.875rem">We can train a neural network (NN/neural network) that gives each token a similar output as like encoding — vector embeddings. Which give each token similar vector of a character/encoding representation.</p>
+        <div class="hl success" style="margin-top:.6rem">
+          <strong>Semantic Meaning Similarity:</strong> Semantically similar words should have similar embedding vectors. The embedding layer is trained alongside the model so that similar-context tokens cluster in vector space.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-h">Feature Table — OHE vs Embedding</div>
+  <table>
+    <tr><th>Feature</th><th>OHE</th><th>Dense Embedding</th></tr>
+    <tr><td class="val">is-animal</td><td>29</td><td class="blue">31</td></tr>
+    <tr><td class="val">has-legs</td><td>2</td><td class="blue">21</td></tr>
+    <tr><td class="val">is-edible</td><td>3</td><td class="blue">3</td></tr>
+    <tr><td class="val">is-pet</td><td>4</td><td class="blue">0e</td></tr>
+    <tr><td>…</td><td>…</td><td>…</td></tr>
+  </table>
+  <div class="hl warn">
+    <strong>Semantic embedding similarity:</strong> Similar words should have similar vectors. Dog cat apple banana (token IDs in table) map to semantically meaningful features. The closer two embedding vectors are in the embedding space, the more semantically related those tokens are.
+  </div>
+
+  <div class="sub-h">Similarity Table (from notes)</div>
+  <table>
+    <tr><th>Feature</th><th>Dog</th><th>Cat</th><th>Apple</th><th>Banana</th></tr>
+    <tr><td class="val">is-animal</td><td class="green">23</td><td class="green">31</td><td class="accent">1</td><td class="accent">2</td></tr>
+    <tr><td class="val">has-legs</td><td class="blue">18</td><td class="blue">21</td><td>22</td><td>0</td></tr>
+    <tr><td class="val">is-edible</td><td>05</td><td>05</td><td class="green">38</td><td class="green">38</td></tr>
+    <tr><td class="val">is-pet</td><td class="green">7</td><td class="green">Qe</td><td>0</td><td>0</td></tr>
+  </table>
+  <p>Dog and Cat have similar "is-animal" and "has-legs" values → they cluster together. Apple and Banana cluster together on "is-edible". The model discovers these relationships automatically through training.</p>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 13 — VOCABULARY EMBEDDING WITH NN -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="vocab-emb">
+  <div class="sec-tag">13 — Vocabulary Embedding with NN</div>
+  <h2>Vocabulary Embedding with a Neural Network</h2>
+
+  <p class="sec-intro">Token embeddings are built using a weight matrix called the <strong>Embedding Matrix</strong>. This matrix maps each token ID to a unique dense vector. The entire vocabulary gets one row each in this matrix. The matrix is learned during training.</p>
+
+  <div class="sub-h">The Embedding Matrix</div>
+  <div class="hl">
+    <strong>Vocabulary size × Embedding dimension = Shape of embedding matrix.</strong> For GPT-2: vocab size = 50,257 and embedding dim = 768, so the embedding matrix is <code>(50257, 768)</code>.
+  </div>
+
+  <div class="ibox">
+    <div class="ibox-title">Embedding Matrix — Example: "The brown fox jumps over the lazy dog"</div>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:.8rem">Sentence: <em>"The brown fox jumps over the lazy dog"</em> → 8 unique tokens</p>
+    <div style="overflow-x:auto">
+    <table>
+      <tr><th>Token</th><th>Token ID</th><th style="text-align:center">Embedding lookup → vector dimension →</th></tr>
+      <tr><td class="val">brown</td><td class="amber">0</td><td><span style="color:var(--accent3)">[ ... 768 float values ... ]</span></td></tr>
+      <tr><td class="val">fox</td><td class="amber">1</td><td><span style="color:var(--accent3)">[ ... 768 float values ... ]</span></td></tr>
+      <tr><td class="val">dog</td><td class="amber">2</td><td><span style="color:var(--accent3)">[ ... 768 float values ... ]</span></td></tr>
+      <tr><td class="val">jump</td><td class="amber">3</td><td><span style="color:var(--accent3)">[ ... 768 float values ... ]</span></td></tr>
+      <tr><td class="val">the</td><td class="amber">4</td><td><span style="color:var(--accent3)">[ ... 768 float values ... ]</span></td></tr>
+      <tr><td class="val">over</td><td class="amber">5</td><td><span style="color:var(--accent3)">[ ... 768 float values ... ]</span></td></tr>
+      <tr><td class="val">lazy</td><td class="amber">6</td><td><span style="color:var(--accent3)">[ ... 768 float values ... ]</span></td></tr>
+      <tr><td class="val">tokens</td><td class="amber">7</td><td><span style="color:var(--accent3)">[ ... 768 float values ... ]</span></td></tr>
+    </table>
+    </div>
+    <div class="mat-wrap" style="margin-top:1rem">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:.4rem">Embedding Matrix Shape</div>
+        <div class="mat">
+          <div class="mat-row">
+            <div class="mat-cell" style="min-width:80px">vocab_size</div>
+            <div class="mat-cell">×</div>
+            <div class="mat-cell" style="min-width:80px">embed_dim</div>
+          </div>
+          <div class="mat-row">
+            <div class="mat-cell hl-cell" style="min-width:80px">50,257</div>
+            <div class="mat-cell">×</div>
+            <div class="mat-cell hl-cell2" style="min-width:80px">768</div>
+          </div>
+        </div>
+        <div class="mat-label">GPT-2 embedding layer weight matrix</div>
+      </div>
+    </div>
+    <div class="hl" style="margin-top:.8rem">
+      <strong>This matrix is the embedding layer weight matrix:</strong> vocab_size × embedding_dim = 50,257 × 768. Each token ID maps to a 768-dim vector — one row from this matrix.
+    </div>
+  </div>
+
+  <div class="sub-h">Vocabulary (embedding matrix) — Initialisation</div>
+  <div class="card-grid">
+    <div class="card amber">
+      <div class="card-title">Vocabulary Embedding Matrix</div>
+      <p>Vocabulary usually starts at alphabetically sorted unique tokens (tokenID). Each word is assigned a unique index (tokenID).</p>
+    </div>
+    <div class="card blue">
+      <div class="card-title">Initially Random</div>
+      <p>These vectors are random initially. During training these are optimised and the embedding layer weight is updated to minimise loss.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Each row = 1 token vector</div>
+      <p>Each word is assigned a 768-dim vector. The matrix shape is (50257 × 768) and each row is one token's embedding vector.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">GPT-2 Architecture Sizes</div>
+  <table>
+    <tr><th>Model Variant</th><th>Parameters</th><th>Embedding Size</th><th>Vocab Size</th></tr>
+    <tr><td class="val">GPT-2 small</td><td class="green">117M</td><td class="blue">768</td><td class="amber">50,257</td></tr>
+    <tr><td class="val">GPT-2 medium</td><td class="green">345M</td><td class="blue">1,024</td><td class="amber">50,257</td></tr>
+    <tr><td class="val">GPT-2 large</td><td class="green">762M</td><td class="blue">1,280</td><td class="amber">50,257</td></tr>
+    <tr><td class="val">GPT-2 XL</td><td class="green">1.5B</td><td class="blue">1,600</td><td class="amber">50,257</td></tr>
+  </table>
+
+  <div class="callout" data-label="Example — quick fox 6 tokens in a house">
+    <p style="color:var(--muted);font-size:.875rem">Input: <em>"quick fox 6 in a house"</em> → 6 tokens → embedding lookup</p>
+    <div class="mb" style="margin-top:.8rem">
+      $$\text{Embedding matrix} \in \mathbb{R}^{50257 \times 768}$$
+      $$\text{Token IDs} = [1, 2, 3, \ldots, 6]$$
+      $$\text{Embedding output} \in \mathbb{R}^{6 \times 768}$$
+      <br>
+      $$\text{For token ID } k: \quad \mathbf{e}_k = W_E[k, :] \in \mathbb{R}^{768}$$
+    </div>
+    <div class="hl success" style="margin-top:.8rem">
+      This means there are 50,257 unique tokens (vocab size), each represented as 768-dimensional unique token vectors. The embedding layer weight matrix is (50257 × 768) — a dim vector.
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Python — Token Embedding with PyTorch</span><button class="code-copy" onclick="copyCode(this)">copy</button></div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+vocab_size   = <span class="nu">50257</span>  <span class="cm"># GPT-2 vocabulary size</span>
+embed_dim    = <span class="nu">768</span>    <span class="cm"># embedding dimension (hidden size)</span>
+
+<span class="cm"># Embedding layer: lookup table of shape (vocab_size, embed_dim)</span>
+<span class="cm"># Each row is the embedding vector for one token ID</span>
+token_embedding_layer = nn.<span class="cl">Embedding</span>(vocab_size, embed_dim)
+
+<span class="cm"># Example: batch of token IDs from DataLoader</span>
+<span class="cm"># inputs shape: (batch_size, context_length) = (8, 4)</span>
+inputs = torch.<span class="fn">tensor</span>([
+    [<span class="nu">9</span>, <span class="nu">8</span>, <span class="nu">1</span>, <span class="nu">20</span>, <span class="nu">21</span>],   <span class="cm"># first text in batch</span>
+    [<span class="nu">1</span>, <span class="nu">3</span>, <span class="nu">4</span>, <span class="nu">5</span>, <span class="nu">7</span>],    <span class="cm"># second text in batch</span>
+])  <span class="cm"># shape: (2, 5)</span>
+
+<span class="cm"># For each token ID, fetch the corresponding row in the embedding matrix</span>
+token_embeddings = token_embedding_layer(inputs)
+
+<span class="fn">print</span>(<span class="st">"inputs shape        :"</span>, inputs.shape)            <span class="cm"># (2, 5)</span>
+<span class="fn">print</span>(<span class="st">"token_embeddings    :"</span>, token_embeddings.shape)   <span class="cm"># (2, 5, 768)</span>
+
+<span class="cm"># Dry run for one token:</span>
+<span class="cm"># token_id = 9 → embedding_layer.weight[9] = a 768-dim vector</span>
+<span class="cm"># embedding_layer.weight shape = (50257, 768)</span>
+
+idx = <span class="nu">9</span>
+single_vec = token_embedding_layer.<span class="fn">weight</span>[idx]
+<span class="fn">print</span>(<span class="st">"single token vector shape:"</span>, single_vec.shape)  <span class="cm"># (768,)</span></pre>
+  </div>
+
+  <div class="hl warn">
+    <strong>Key insight:</strong> <code>nn.Embedding(vocab_size, embed_dim)</code> is nothing but a weight matrix of shape <code>(vocab_size, embed_dim)</code>. Looking up token ID <code>k</code> simply fetches row <code>k</code> from this matrix. The entire operation is O(1) — a simple index lookup, not a matrix multiplication.
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 14 — EMBEDDING LAYER DETAILS -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="emb-layer">
+  <div class="sec-tag">14 — Embedding Layer Details</div>
+  <h2>What Does the Embedding Layer Actually Do?</h2>
+
+  <p class="sec-intro">The embedding layer is a <strong>lookup table operation</strong> — not a matrix multiplication. It takes an integer token ID and retrieves the corresponding row from the embedding weight matrix. Understanding the exact shapes and operations is critical for debugging and building LLMs from scratch.</p>
+
+  <div class="sub-h">The Embedding Layer is a Lookup Table</div>
+  <p>The embedding layer is a <em>lookup table</em> operation that retrieves rows from the embedding matrix using the input token IDs as indices.</p>
+
+  <div class="ibox">
+    <div class="ibox-title">Lookup Mechanics</div>
+    <div class="mb">
+      $$\text{Given: } \text{input\_ids} = [k_1, k_2, \ldots, k_n] \quad \text{(token IDs)}$$
+      $$W_E \in \mathbb{R}^{V \times d} \quad \text{(embedding weight matrix, V=vocab, d=dim)}$$
+      $$\text{Output: } \mathbf{E} = W_E[\text{input\_ids}] \in \mathbb{R}^{n \times d}$$
+      $$\text{i.e., } \mathbf{E}[i] = W_E[k_i] \quad \text{(row lookup, not matmul)}$$
+    </div>
+    <div class="hl success">
+      <strong>Performing lookup:</strong> embedding lookup — embedding matrix has a weight matrix layer that has weight. The embedding is not computed — it is <em>fetched</em>. The index is the token ID; the output is the row at that index.
+    </div>
+  </div>
+
+  <div class="sub-h">Embedding Layer Shape Analysis</div>
+  <div class="ibox">
+    <div class="ibox-title">Step-by-Step Shape Trace</div>
+    <table>
+      <tr><th>Tensor</th><th>Shape</th><th>Description</th></tr>
+      <tr><td class="val">inputs (token IDs)</td><td class="blue">(batch, seq_len)</td><td>e.g. (8, 4) — 8 texts, 4 tokens each</td></tr>
+      <tr><td class="val">embedding matrix W_E</td><td class="blue">(vocab_size, embed_dim)</td><td>e.g. (50257, 768)</td></tr>
+      <tr><td class="val">output embeddings</td><td class="green">(batch, seq_len, embed_dim)</td><td>e.g. (8, 4, 768) — each token is now a 768-d vector</td></tr>
+    </table>
+    <div style="margin-top:.8rem">
+      <p style="color:var(--muted);font-size:.875rem">Concretely for GPT-2 with batch=8, context=4, embed_dim=768:</p>
+      <div class="mb">
+        $$\text{inputs} \in \mathbb{R}^{8 \times 4} \xrightarrow{W_E \text{ lookup}} \text{token\_emb} \in \mathbb{R}^{8 \times 4 \times 768}$$
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-h">This is architecturally similar to a neural network</div>
+  <div class="two-col">
+    <div class="hl">
+      <strong>One input note:</strong> This is architecturally similar to a neural network (NN). The input note ID is (0,1,0,0...) — one-hot vector. One input note is multiply with embedding matrix to give one 768-dim output (embedding vector).
+    </div>
+    <div class="hl warn">
+      <strong>But much more efficient:</strong> Embedding layers are much more computationally efficient than one-hot encoding + matrix multiplication. Instead of doing a full matmul, we just index into the matrix — O(1) per token.
+    </div>
+  </div>
+
+  <div class="sub-h">Token Embedding Layer Performing</div>
+  <div class="ibox">
+    <div class="ibox-title">Embedding Layer — Token IDs → Embedding Vectors</div>
+    <p style="color:var(--muted);font-size:.875rem;margin-bottom:.8rem">This embedding method has a weight matrix layer — of shape (4, 5) for vocabulary=4, dim=5.</p>
+
+    <div class="tok-vis" style="margin:.8rem 0">
+      <span class="tok-label">Token IDs:</span>
+      <div class="tok-box input">2</div>
+      <div class="tok-box input">3</div>
+      <div class="tok-box input">1</div>
+      <div class="tok-box input">0</div>
+    </div>
+    <div style="color:var(--muted);text-align:center;font-size:1.2rem;margin:.4rem 0">↓ embedding lookup (fetch row from W_E)</div>
+    <div class="tok-vis" style="margin:.8rem 0">
+      <span class="tok-label">Vectors (dim=5):</span>
+      <div class="tok-box emb">[0.3, -0.1, 0.9, 0.2, -0.4]</div>
+    </div>
+    <p style="color:var(--muted);font-size:.875rem">Each token ID fetches its corresponding row from the embedding weight matrix. Output shape: (sequence_length, embedding_dim).</p>
+  </div>
+
+  <div class="sub-h">Positional Encoding — Preview</div>
+  <div class="hl red">
+    <strong>Problem so far:</strong> Until now we looked at the embedding layer — the same token ID always gets the same embedding vector, regardless of its position in the sentence. In embedding, two identical tokens in different positions get <em>identical</em> representations. The order of words is lost entirely. This is a fundamental limitation — word order matters in language.
+  </div>
+
+  <div class="callout" data-label="Summarising the problem">
+    <p style="color:var(--muted);font-size:.875rem">Example: <em>"the cat sat on the mat"</em></p>
+    <p style="color:var(--muted);font-size:.875rem;margin-top:.5rem">Both occurrences of <code>"the"</code> (position 0 and position 4) get the <strong>exact same</strong> embedding vector from the lookup table. The model cannot distinguish which "the" is which. This is problematic — sentence meaning is order-dependent (translation, summarisation, Q&A all rely on word order).</p>
+    <div class="hl warn" style="margin-top:.8rem">
+      <strong>Summarisation of issue:</strong> Basic embedding layers lack positional information. The same token ID is mapped to the same vector representation regardless of where the token is positioned in the input sentence.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 15 — POSITIONAL ENCODING -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="pos-enc">
+  <div class="sec-tag">15 — Positional Encoding</div>
+  <h2>Positional Encoding</h2>
+
+  <p class="sec-intro">Positional encoding injects information about <em>where</em> each token appears in the sequence into the model. Without it, Transformers are order-invariant — they treat input as a set, not a sequence. Positional encoding makes the model sequence-aware.</p>
+
+  <div class="sub-h">Why Positional Information is Needed</div>
+  <div class="card-grid">
+    <div class="card red">
+      <div class="card-title">The Core Problem</div>
+      <p>Token embedding does not capture positional information. Words like "the cat sat" vs "sat the cat" would have identical representations — but mean different things.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">To resolve this</div>
+      <p>It is helpful to inject the additional positional information into the model by adding positional encoding into the model's embedding for each word containing the same vector.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Solution</div>
+      <p>Encode order information: each position in the sequence should add or modify the token embedding to encode where it is. Positional encoding adds a unique signature to each position.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Two Types of Positional Encoding</div>
+  <div class="two-col">
+    <div class="hl">
+      <strong>① Absolute Positional Encoding:</strong> For each position in the input sequence, a unique embedding is added to the token's embedding. For each position in the input sequence, a unique embedding is assigned to the token's embedding, regardless of whether the same word appears at different positions.
+    </div>
+    <div class="hl warn">
+      <strong>② Relative Positional Encoding:</strong> It focuses on the relative position and distance between tokens instead of their exact location in the sequence. The model learns the relationship in terms of distance between tokens, not their absolute position index.
+    </div>
+  </div>
+
+  <div class="sub-h">It is helpful for injecting output</div>
+  <p>Positional information is helpful for injecting the LLM output. The model processes all tokens in parallel during training (unlike RNNs), so positional encoding is the only way the model knows the order of tokens.</p>
+
+  <div class="pipeline">
+    <div class="pipe-box accent">Token IDs</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">Token Embedding</div>
+    <div class="pipe-arrow">+</div>
+    <div class="pipe-box amber">Positional Encoding</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Final Input to Transformer</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- SECTION 16 — ABSOLUTE POSITIONAL ENCODING -->
+<!-- ══════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="abs-pe">
+  <div class="sec-tag">16 — Absolute Positional Encoding</div>
+  <h2>Absolute Positional Embedding</h2>
+
+  <p class="sec-intro">Absolute PE assigns a unique vector to each absolute position index (0, 1, 2, …). For each position in the input sequence, a unique embedding is added to the token's embedding. GPT-2 and GPT-3 use <strong>learned absolute positional embeddings</strong>.</p>
+
+  <div class="sub-h">Mathematical Definition</div>
+  <div class="mb">
+    $$\mathbf{h}_t = \mathbf{e}_t + \mathbf{p}_t$$
+    <br>
+    $$\text{where} \quad \mathbf{e}_t = W_E[\text{token\_id}_t] \in \mathbb{R}^d \quad \text{(token embedding)}$$
+    $$\mathbf{p}_t = W_P[t] \in \mathbb{R}^d \quad \text{(positional embedding, } t = \text{position index)}$$
+    $$W_P \in \mathbb{R}^{T_{\max} \times d} \quad \text{(positional embedding matrix, learned)}$$
+  </div>
+  <p>The final input to the Transformer is the <strong>element-wise sum</strong> of the token embedding and the positional embedding. Both are the same dimension <code>d</code>.</p>
+
+  <div class="sub-h">Step-by-Step Example — "the cat sat on the mat"</div>
+  <div class="ibox">
+    <div class="ibox-title">Absolute PE Construction — sentence with 6 tokens</div>
+
+    <div class="step on" id="abs-step-1">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent4);letter-spacing:1px;margin-bottom:.8rem">STEP 1 — Tokenise and get IDs</div>
+      <div class="tok-vis">
+        <div class="tok-box input">the</div><div class="tok-box input">cat</div><div class="tok-box input">sat</div>
+        <div class="tok-box input">on</div><div class="tok-box input">the</div><div class="tok-box input">mat</div>
+      </div>
+      <div class="tok-vis" style="margin-top:.4rem">
+        <div class="tok-label">IDs →</div>
+        <div class="tok-box id">4</div><div class="tok-box id">1</div><div class="tok-box id">2</div>
+        <div class="tok-box id">3</div><div class="tok-box id">4</div><div class="tok-box id">5</div>
+      </div>
+      <div class="hl" style="margin-top:.8rem">Note: "the" at position 0 and "the" at position 4 both have token ID = 4. Same ID — same token embedding!</div>
+    </div>
+
+    <div class="step" id="abs-step-2">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent4);letter-spacing:1px;margin-bottom:.8rem">STEP 2 — Token embedding lookup (W_E)</div>
+      <div class="mat-wrap">
+        <div>
+          <div class="mat-label" style="margin-bottom:.3rem">W_E lookup for each token ID</div>
+          <div class="mat">
+            <div class="mat-row"><div class="mat-cell hl-cell" style="min-width:120px">e_0 = W_E[4]</div><div class="mat-cell" style="min-width:200px">→ [0.2, -0.1, 0.9, …]  (dim=768)</div></div>
+            <div class="mat-row"><div class="mat-cell hl-cell" style="min-width:120px">e_1 = W_E[1]</div><div class="mat-cell" style="min-width:200px">→ [0.5, 0.3, -0.2, …]</div></div>
+            <div class="mat-row"><div class="mat-cell" style="min-width:120px">…</div><div class="mat-cell" style="min-width:200px">…</div></div>
+            <div class="mat-row"><div class="mat-cell hl-cell3" style="min-width:120px">e_4 = W_E[4]</div><div class="mat-cell" style="min-width:200px">→ [0.2, -0.1, 0.9, …]  ← SAME as e_0!</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step" id="abs-step-3">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent4);letter-spacing:1px;margin-bottom:.8rem">STEP 3 — Positional embedding lookup (W_P)</div>
+      <div class="mat">
+        <div class="mat-row"><div class="mat-cell hl-cell2" style="min-width:120px">p_0 = W_P[0]</div><div class="mat-cell" style="min-width:200px">→ [-2.8, 0.3, -0.17, …] (unique for pos 0)</div></div>
+        <div class="mat-row"><div class="mat-cell hl-cell2" style="min-width:120px">p_1 = W_P[1]</div><div class="mat-cell" style="min-width:200px">→ [0.4, 1.5, -0.17, …]  (unique for pos 1)</div></div>
+        <div class="mat-row"><div class="mat-cell hl-cell2" style="min-width:120px">p_4 = W_P[4]</div><div class="mat-cell" style="min-width:200px">→ [-0.7, -0.1, 1.6, …]  (unique for pos 4)</div></div>
+      </div>
+      <div class="hl success" style="margin-top:.8rem">
+        <strong>W_P is a (context_length × embed_dim) matrix</strong> — for GPT-2 context=1024, dim=768, so W_P is (1024 × 768). Fully learned during training.
+      </div>
+    </div>
+
+    <div class="step" id="abs-step-4">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent4);letter-spacing:1px;margin-bottom:.8rem">STEP 4 — Add token embedding + positional embedding</div>
+      <div class="mb">
+        $$\mathbf{h}_t = \mathbf{e}_t + \mathbf{p}_t$$
+        $$\mathbf{h}_0 = W_E[4] + W_P[0] \neq \mathbf{h}_4 = W_E[4] + W_P[4]$$
+      </div>
+      <div class="hl success">
+        <strong>Now the two "the" tokens are distinguishable!</strong> Even though they have the same token embedding, their positional embeddings are different, so <code>h_0 ≠ h_4</code>. The model knows their positions.
+      </div>
+      <div class="mat-wrap" style="margin-top:1rem">
+        <div style="font-size:.85rem;color:var(--muted)">Input to Transformer:</div>
+        <div class="mat">
+          <div class="mat-row">
+            <div class="mat-cell hl-cell" style="min-width:100px">h_0 (the)</div>
+            <div class="mat-cell hl-cell" style="min-width:100px">h_1 (cat)</div>
+            <div class="mat-cell hl-cell" style="min-width:100px">h_2 (sat)</div>
+            <div class="mat-cell hl-cell" style="min-width:100px">h_3 (on)</div>
+            <div class="mat-cell hl-cell2" style="min-width:100px">h_4 (the)</div>
+            <div class="mat-cell hl-cell" style="min-width:100px">h_5 (mat)</div>
+          </div>
+        </div>
+        <div class="mat-label">Shape: (6, 768) — all unique vectors, even for repeated tokens</div>
+      </div>
+    </div>
+
+    <div class="step-ctrl">
+      <button class="btn" onclick="stepNav('abs-step',1,4,-1)">← Prev</button>
+      <span class="step-idx" id="abs-step-idx">Step 1 of 4</span>
+      <button class="btn" onclick="stepNav('abs-step',1,4,1)">Next →</button>
+    </div>
+  </div>
+
+  <div class="sub-h">Full Forward Pass — Token + Positional Embedding</div>
+  <div class="ibox">
+    <div class="ibox-title">Complete Input Embedding Matrix (batch view)</div>
+    <p style="color:var(--muted);font-size:.875rem;margin-bottom:.8rem">Input shape after both embeddings are combined:</p>
+    <div class="mb">
+      $$\text{inputs} \in \mathbb{R}^{B \times T} \xrightarrow{\text{token emb}} \mathbb{R}^{B \times T \times d}$$
+      $$\xrightarrow{+ \text{ pos emb}} \mathbb{R}^{B \times T \times d} \quad \text{(same shape, position-aware)}$$
+      <br>
+      $$\text{where } B = \text{batch size}, \; T = \text{context length}, \; d = \text{embedding dim}$$
+    </div>
+    <p style="color:var(--muted);font-size:.875rem;margin-top:.8rem">For GPT-2 small: B=8, T=1024, d=768 → final input tensor shape = <strong>(8, 1024, 768)</strong></p>
+    <div class="hl warn" style="margin-top:.8rem">
+      <strong>Same positional embedding is applied to each batch item.</strong> The positional embedding p_t is the same for position t in every text in the batch — it only depends on the position, not the actual token. So the same 4 positional embeddings are applied to each of the 8 texts, and the embedding is only one pattern.
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Python — Absolute Positional Embedding (GPT-2 style)</span><button class="code-copy" onclick="copyCode(this)">copy</button></div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+vocab_size    = <span class="nu">50257</span>
+context_len   = <span class="nu">1024</span>   <span class="cm"># max sequence length GPT-2 supports</span>
+embed_dim     = <span class="nu">768</span>
+
+<span class="cm"># Token embedding: maps token ID → dense vector</span>
+token_embedding_layer    = nn.<span class="cl">Embedding</span>(vocab_size, embed_dim)
+
+<span class="cm"># Positional embedding: maps position index → dense vector</span>
+<span class="cm"># Shape: (context_len, embed_dim) = (1024, 768)</span>
+position_embedding_layer = nn.<span class="cl">Embedding</span>(context_len, embed_dim)
+
+<span class="cm"># Example inputs: batch of token ID tensors</span>
+<span class="cm"># inputs shape: (batch_size, seq_len) = (8, 4)</span>
+inputs = torch.<span class="fn">tensor</span>([
+    [<span class="nu">9</span>, <span class="nu">8</span>, <span class="nu">16</span>, <span class="nu">23</span>],
+    [<span class="nu">1</span>, <span class="nu">3</span>, <span class="nu">4</span>, <span class="nu">5</span>],
+])  <span class="cm"># (2, 4)</span>
+
+<span class="cm"># Token embeddings: (batch, seq_len, embed_dim)</span>
+tok_emb = token_embedding_layer(inputs)  <span class="cm"># (2, 4, 768)</span>
+
+<span class="cm"># Position indices: [0, 1, 2, 3] for seq_len=4</span>
+<span class="cm"># arange gives positions; same positions for every batch item</span>
+pos_indices = torch.<span class="fn">arange</span>(inputs.<span class="fn">shape</span>[<span class="nu">1</span>])   <span class="cm"># [0, 1, 2, 3]</span>
+pos_emb = position_embedding_layer(pos_indices)  <span class="cm"># (4, 768)</span>
+
+<span class="cm"># Add: broadcasting handles the batch dimension automatically</span>
+<span class="cm"># tok_emb: (2, 4, 768) + pos_emb: (4, 768) → (2, 4, 768)</span>
+input_embeddings = tok_emb + pos_emb
+
+<span class="fn">print</span>(<span class="st">"tok_emb shape        :"</span>, tok_emb.shape)          <span class="cm"># (2, 4, 768)</span>
+<span class="fn">print</span>(<span class="st">"pos_emb shape        :"</span>, pos_emb.shape)          <span class="cm"># (4, 768)</span>
+<span class="fn">print</span>(<span class="st">"input_embeddings     :"</span>, input_embeddings.shape)  <span class="cm"># (2, 4, 768)</span>
+
+<span class="cm"># Dry run:</span>
+<span class="cm"># state  → inputs = [[9,8,16,23],[1,3,4,5]]</span>
+<span class="cm"># action → token_embedding_layer(inputs) fetches 8 rows from W_E</span>
+<span class="cm"># state  → tok_emb shape = (2, 4, 768)</span>
+<span class="cm"># action → pos_indices = [0,1,2,3] → fetch 4 rows from W_P</span>
+<span class="cm"># state  → pos_emb shape = (4, 768)</span>
+<span class="cm"># action → tok_emb + pos_emb (broadcast over batch)</span>
+<span class="cm"># state  → input_embeddings shape = (2, 4, 768) [ready for Transformer]</span></pre>
+  </div>
+
+  <div class="sub-h">Sinusoidal Absolute PE (Original Transformer)</div>
+  <div class="mb">
+    $$PE_{(pos, 2i)} = \sin\!\left(\frac{pos}{10000^{2i/d}}\right)$$
+    $$PE_{(pos, 2i+1)} = \cos\!\left(\frac{pos}{10000^{2i/d}}\right)$$
+    $$\text{where } pos = \text{position index}, \; i = \text{dimension index}, \; d = \text{embedding dim}$$
+  </div>
+  <div class="hl">
+    <strong>GPT-2 uses learned PE</strong> (not sinusoidal). W_P is trainable and optimised jointly with the rest of the model weights. Sinusoidal PE is fixed (not learned) and has the useful property that relative positions can be recovered as linear combinations of the PE vectors.
+  </div>
+</section>
+
+<!-- SECTION 17 -->
+<section class="sec reveal" id="rel-pe">
+  <div class="sec-tag">17 — Relative Positional Encoding</div>
+  <h2>Relative Positional Embedding</h2>
+  <p class="sec-intro">Relative PE focuses on the <em>distance between tokens</em> rather than their absolute position index. This lets the model generalise to sequences longer than those seen during training.</p>
+
+  <div class="sub-h">Mathematical Definition</div>
+  <div class="mb">
+    $$\text{Absolute PE: } \mathbf{h}_t = \mathbf{e}_t + \mathbf{p}_t$$
+    $$\text{Relative PE (Shaw et al.): } a_{ij} = \text{softmax}\!\left(\frac{\mathbf{q}_i^\top (\mathbf{k}_j + \mathbf{e}_{i-j})}{\sqrt{d_k}}\right)$$
+    $$\text{where } \mathbf{e}_{i-j} = W_P[i-j] \quad \text{(learnable vector for relative distance)}$$
+  </div>
+
+  <div class="sub-h">Absolute vs Relative — Comparison</div>
+  <table>
+    <tr><th>Property</th><th>Absolute PE</th><th>Relative PE</th></tr>
+    <tr><td class="val">What it encodes</td><td>Exact position index</td><td>Distance between token pairs</td></tr>
+    <tr><td class="val">Where applied</td><td>Added to token embedding</td><td>Added inside attention scores</td></tr>
+    <tr><td class="val">Generalises to longer seq?</td><td class="accent">Limited</td><td class="green">Better</td></tr>
+    <tr><td class="val">Used in</td><td class="blue">GPT-2, GPT-3, BERT</td><td class="blue">T5, MPT, Mistral (ALiBi)</td></tr>
+    <tr><td class="val">Learnable?</td><td class="green">Yes (GPT-2)</td><td class="green">Yes (Shaw et al.)</td></tr>
+  </table>
+
+  <div class="two-col">
+    <div class="hl">
+      <strong>Absolute PE</strong> is suitable for fixed order of tokens — autoregressive sequence generation. OpenAI GPT models use absolute positional embeddings optimised during training.
+    </div>
+    <div class="hl warn">
+      <strong>Relative PE</strong> is suitable for tasks like language modelling over long sequences where the same phrase can appear in different parts of the text.
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Python — ALiBi Relative PE Bias</span><button class="code-copy" onclick="copyCode(this)">copy</button></div>
+    <pre><span class="kw">import</span> torch
+
+<span class="cm"># ALiBi: add linear bias to attention scores based on token distance</span>
+<span class="cm"># bias[head][i][j] = -slope[head] * |i - j|</span>
+<span class="kw">def</span> <span class="fn">get_alibi_bias</span>(seq_len, num_heads, device=<span class="st">'cpu'</span>):
+    slopes = torch.<span class="fn">tensor</span>([
+        <span class="nu">2</span> ** (-<span class="nu">8</span> / num_heads * i)
+        <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="nu">1</span>, num_heads + <span class="nu">1</span>)
+    ], device=device)   <span class="cm"># shape: (num_heads,)</span>
+
+    positions = torch.<span class="fn">arange</span>(seq_len, device=device)
+    rel_dist  = (positions.<span class="fn">unsqueeze</span>(<span class="nu">0</span>) - positions.<span class="fn">unsqueeze</span>(<span class="nu">1</span>)).<span class="fn">abs</span>()
+    bias = -slopes[:, <span class="kw">None</span>, <span class="kw">None</span>] * rel_dist.<span class="fn">unsqueeze</span>(<span class="nu">0</span>)
+    <span class="kw">return</span> bias   <span class="cm"># (num_heads, seq_len, seq_len)</span>
+
+<span class="cm"># In attention: attn_scores = Q @ K.T / sqrt(d_k) + alibi_bias</span>
+bias = <span class="fn">get_alibi_bias</span>(<span class="nu">4</span>, <span class="nu">8</span>)
+<span class="fn">print</span>(<span class="st">"ALiBi bias shape:"</span>, bias.shape)  <span class="cm"># (8, 4, 4)</span>
+
+<span class="cm"># Dry run (head=0, slope≈0.707, seq_len=4):</span>
+<span class="cm"># state  → rel_dist[0][2] = |0-2| = 2</span>
+<span class="cm"># action → bias[0][0][2] = -0.707 * 2 = -1.414</span>
+<span class="cm"># state  → position 2 attends less to position 0 than to position 1</span></pre>
+  </div>
+</section>
+
+<!-- SECTION 18 -->
+<section class="sec reveal" id="gpt2-arch">
+  <div class="sec-tag">18 — GPT-2 Embedding Architecture</div>
+  <h2>GPT-2 Embedding Architecture</h2>
+  <p class="sec-intro">GPT-2 uses learned absolute positional embeddings, optimised during training alongside the rest of the model. Here is the complete embedding module and the full pipeline from token IDs to Transformer input.</p>
+
+  <div class="sub-h">GPT-2 Embedding Parameters</div>
+  <table>
+    <tr><th>Variant</th><th>Parameters</th><th>Embed dim</th><th>Vocab</th><th>Context</th></tr>
+    <tr><td class="val">GPT-2 small</td><td class="green">117M</td><td class="blue">768</td><td class="amber">50,257</td><td>1024</td></tr>
+    <tr><td class="val">GPT-2 medium</td><td class="green">345M</td><td class="blue">1,024</td><td class="amber">50,257</td><td>1024</td></tr>
+    <tr><td class="val">GPT-2 large</td><td class="green">762M</td><td class="blue">1,280</td><td class="amber">50,257</td><td>1024</td></tr>
+    <tr><td class="val">GPT-2 XL</td><td class="green">1.5B</td><td class="blue">1,600</td><td class="amber">50,257</td><td>1024</td></tr>
+  </table>
+
+  <div class="sub-h">Full Embedding Math</div>
+  <div class="mb">
+    $$W_E \in \mathbb{R}^{50257 \times 768}, \quad W_P \in \mathbb{R}^{1024 \times 768}$$
+    $$\mathbf{X} = W_E[\text{token\_ids}] + W_P[\text{positions}] \in \mathbb{R}^{B \times T \times 768}$$
+    $$\text{Total embedding params} = 50257 \times 768 + 1024 \times 768 \approx 39.4\text{M}$$
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Python — Complete GPT-2 Embedding Module</span><button class="code-copy" onclick="copyCode(this)">copy</button></div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+<span class="kw">class</span> <span class="cl">GPT2Config</span>:
+    vocab_size  = <span class="nu">50257</span>
+    context_len = <span class="nu">1024</span>
+    embed_dim   = <span class="nu">768</span>
+    drop_rate   = <span class="nu">0.1</span>
+
+<span class="kw">class</span> <span class="cl">GPT2EmbeddingLayer</span>(nn.<span class="cl">Module</span>):
+    <span class="cm"># Token embedding + Positional embedding — both learned</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, cfg):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        self.token_emb    = nn.<span class="cl">Embedding</span>(cfg.vocab_size, cfg.embed_dim)
+        self.position_emb = nn.<span class="cl">Embedding</span>(cfg.context_len, cfg.embed_dim)
+        self.drop         = nn.<span class="cl">Dropout</span>(cfg.drop_rate)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, token_ids):
+        B, T = token_ids.shape
+        tok_emb = self.token_emb(token_ids)              <span class="cm"># (B, T, d)</span>
+        pos_ids = torch.<span class="fn">arange</span>(T, device=token_ids.device)
+        pos_emb = self.position_emb(pos_ids)             <span class="cm"># (T, d)</span>
+        <span class="kw">return</span> self.<span class="fn">drop</span>(tok_emb + pos_emb)            <span class="cm"># (B, T, d)</span>
+
+cfg = <span class="cl">GPT2Config</span>()
+emb = <span class="cl">GPT2EmbeddingLayer</span>(cfg)
+
+token_ids = torch.<span class="fn">randint</span>(<span class="nu">0</span>, cfg.vocab_size, (<span class="nu">2</span>, <span class="nu">4</span>))
+out = emb(token_ids)
+<span class="fn">print</span>(<span class="st">"output shape:"</span>, out.shape)  <span class="cm"># (2, 4, 768)</span>
+
+<span class="cm"># Dry run:</span>
+<span class="cm"># state  → token_ids (2,4), B=2, T=4</span>
+<span class="cm"># action → token_emb lookup → tok_emb (2,4,768)</span>
+<span class="cm"># action → arange(4) → pos_emb (4,768)</span>
+<span class="cm"># action → tok_emb + pos_emb → (2,4,768)  [broadcast over batch]</span>
+<span class="cm"># action → dropout(x)</span>
+<span class="cm"># state  → out (2,4,768) enters Transformer block 1</span></pre>
+  </div>
+
+  <div class="sub-h">Full End-to-End Pipeline</div>
+  <div class="pipeline">
+    <div class="pipe-box accent">Raw Text</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">BPE Tokenise</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">Token IDs (B×T)</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">W_E lookup (B×T×d)</div>
+    <div class="pipe-arrow">+</div>
+    <div class="pipe-box">W_P lookup (T×d)</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">Input (B×T×d)</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">12× Transformer Block</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Logits → Next Token</div>
+  </div>
+
+  <div class="callout" data-label="Summary — Part 2">
+    <h3 style="font-family:'DM Serif Display',serif;margin-bottom:.8rem">What We Covered in Part 2</h3>
+    <table>
+      <tr><th>§</th><th>Topic</th><th>Key Formula / Fact</th></tr>
+      <tr><td class="amber">10</td><td class="val">Input-Target Pairs</td><td>x=tokens[0:T], y=tokens[1:T+1]</td></tr>
+      <tr><td class="amber">11</td><td class="val">Sliding Window DataLoader</td><td>stride controls overlap; Dataset+DataLoader</td></tr>
+      <tr><td class="amber">12</td><td class="val">Token Embedding</td><td>Dense &gt; OHE; semantic similarity from training</td></tr>
+      <tr><td class="amber">13</td><td class="val">Vocab Embedding NN</td><td>W_E ∈ ℝ^(50257×768), row lookup by ID</td></tr>
+      <tr><td class="amber">14</td><td class="val">Embedding Layer</td><td>Lookup table not matmul; order problem introduced</td></tr>
+      <tr><td class="amber">15</td><td class="val">Positional Encoding</td><td>Two types: Absolute and Relative</td></tr>
+      <tr><td class="amber">16</td><td class="val">Absolute PE</td><td>h_t = e_t + p_t; W_P ∈ ℝ^(1024×768) learned</td></tr>
+      <tr><td class="amber">17</td><td class="val">Relative PE</td><td>a_ij = softmax(q_i^T(k_j + e_{i-j}) / sqrt(d_k))</td></tr>
+      <tr><td class="amber">18</td><td class="val">GPT-2 Architecture</td><td>token_emb + pos_emb + dropout → Transformer</td></tr>
+    </table>
+    <div style="margin-top:1rem;display:flex;flex-wrap:wrap;gap:.4rem">
+      <span class="tag red">Input-Target</span><span class="tag">DataLoader</span><span class="tag green">Token Emb</span>
+      <span class="tag amber">Positional Enc</span><span class="tag">Absolute PE</span><span class="tag red">Relative PE</span>
+      <span class="tag green">GPT-2</span><span class="tag">PyTorch</span>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+const prog = document.getElementById('prog');
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const pct = (window.scrollY / (h.scrollHeight - h.clientHeight)) * 100;
+  prog.style.width = pct + '%';
+});
+const revealEls = document.querySelectorAll('.reveal');
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('show'); });
+}, { threshold: 0.06 });
+revealEls.forEach(el => revealObs.observe(el));
+const sections = document.querySelectorAll('section.sec[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+const navObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting) {
+      navLinks.forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id);
+      });
+    }
+  });
+}, { rootMargin: '-40% 0px -50% 0px' });
+sections.forEach(s => navObs.observe(s));
+const stepState = {};
+function stepNav(prefix, min, max, dir) {
+  if(!stepState[prefix]) stepState[prefix] = min;
+  const cur = stepState[prefix];
+  const el = document.getElementById(prefix + '-' + cur);
+  if(el) el.classList.remove('on');
+  let next = cur + dir;
+  if(next < min) next = max;
+  if(next > max) next = min;
+  stepState[prefix] = next;
+  const nextEl = document.getElementById(prefix + '-' + next);
+  if(nextEl) nextEl.classList.add('on');
+  const idx = document.getElementById(prefix + '-idx');
+  if(idx) idx.textContent = 'Step ' + next + ' of ' + max;
+}
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 1800);
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  renderMathInElement(document.body, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '$', right: '$', display: false }
+    ],
+    throwOnError: false
+  });
+});
+</script>
+</body>
+</html>
