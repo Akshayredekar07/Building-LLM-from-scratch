@@ -37,7 +37,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 
 /* Nav */
 nav{position:fixed;top:3px;left:0;right:0;background:rgba(13,17,23,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0;padding:0 2rem;height:48px;z-index:200;}
-.nav-brand{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;background:var(--grad-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-right:2rem;white-space:nowrap;flex-shrink:0;}
+.nav-brand{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;background:var(--grad-accent);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-right:2rem;white-space:nowrap;flex-shrink:0;}
 .nav-links{display:flex;gap:2px;overflow-x:auto;flex:1}
 .nav-links::-webkit-scrollbar{height:0}
 .nav-links a{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:6px;border:1px solid transparent;white-space:nowrap;transition:all .2s;}
@@ -49,7 +49,7 @@ main{max-width:920px;margin:0 auto;padding:80px 2rem 80px}
 /* Hero */
 .hero{display:grid;grid-template-columns:1.1fr 0.9fr;gap:3rem;padding:3rem 0 3.5rem;border-bottom:1px solid var(--border);margin-bottom:4rem;}
 .hero h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,5vw,4.6rem);line-height:1;letter-spacing:2px;color:var(--text);}
-.hero h1 span{background:var(--grad-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero h1 span{background:var(--grad-accent);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .hero-right{padding-top:.5rem}
 .hero-right p{font-family:'DM Serif Display',serif;font-style:italic;font-size:1.05rem;color:var(--muted);line-height:1.6;}
 .hero-meta{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.5px;color:var(--muted);margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--border);}

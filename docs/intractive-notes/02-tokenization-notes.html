@@ -77,6 +77,7 @@ nav{
   font-size:18px;letter-spacing:2px;
   background:var(--grad-accent);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
   margin-right:2rem;white-space:nowrap;flex-shrink:0;
 }
 .nav-links{display:flex;gap:2px;overflow-x:auto;flex:1}
@@ -106,7 +107,7 @@ main{max-width:900px;margin:0 auto;padding:80px 2rem 80px}
   font-size:clamp(2.8rem,5.5vw,5rem);
   line-height:1;letter-spacing:2px;color:var(--text);
 }
-.hero h1 span{background:var(--grad-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero h1 span{background:var(--grad-accent);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .hero-right{padding-top:.5rem}
 .hero-right p{
   font-family:'DM Serif Display',serif;

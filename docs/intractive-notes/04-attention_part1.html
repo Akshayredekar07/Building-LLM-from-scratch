@@ -1,0 +1,1485 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Attention Mechanism — Deep Learning Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,700;1,400&family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<style>
+:root{
+  --bg:#1f1f1e;
+  --bg2:#2c2c2a;
+  --bg3:#121212;
+  --text:#e6edf3;
+  --muted:#8b949e;
+  --accent:#f78166;
+  --accent2:#d29922;
+  --accent3:#58a6ff;
+  --accent4:#3fb950;
+  --border:#3a3a37;
+  --sidebar-w:240px;
+  --grad-accent:linear-gradient(135deg,#f78166 0%,#d29922 100%);
+  --card-glow:0 0 0 1px #3a3a37,0 4px 24px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;line-height:1.7;padding-top:52px;transition:padding-left .3s}
+body.sidebar-open{padding-left:var(--sidebar-w)}
+a{color:var(--accent3);text-decoration:none}
+
+/* ── Progress bar ── */
+
+/* ── Top Nav ── */
+nav.topnav{
+  position:fixed;top:3px;left:0;right:0;height:48px;
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 1.2rem;gap:1rem;z-index:8000;
+}
+.nav-toggle{
+  background:none;border:1px solid var(--border);color:var(--accent);
+  font-family:'JetBrains Mono',monospace;font-size:.8rem;
+  padding:.2rem .55rem;border-radius:5px;cursor:pointer;
+  transition:all .2s;white-space:nowrap;letter-spacing:.03em;
+}
+.nav-toggle:hover{border-color:var(--accent);background:rgba(247,129,102,.1)}
+.nav-brand{
+  font-family:'Playfair Display',serif;font-size:1rem;
+  color:#ffffff;letter-spacing:.01em;white-space:nowrap;font-weight:700;
+}
+.nav-divider{width:1px;height:22px;background:var(--border);flex-shrink:0}
+.nav-scrolllinks{display:flex;gap:1rem;overflow-x:auto;flex:1;scrollbar-width:none}
+.nav-scrolllinks::-webkit-scrollbar{display:none}
+.nav-scrolllinks a{
+  font-family:'JetBrains Mono',monospace;font-size:.68rem;
+  color:var(--muted);transition:color .2s;white-space:nowrap;
+}
+.nav-scrolllinks a.active,.nav-scrolllinks a:hover{color:var(--accent3)}
+
+/* ── Sidebar ── */
+#sidebar{
+  position:fixed;top:51px;left:0;bottom:0;width:var(--sidebar-w);
+  background:var(--bg2);border-right:1px solid var(--border);
+  z-index:7000;overflow-y:auto;scrollbar-width:thin;
+  transform:translateX(-100%);transition:transform .3s;
+  padding-bottom:2rem;
+}
+#sidebar.open{transform:translateX(0)}
+.sb-title{
+  font-family:'JetBrains Mono',monospace;font-size:.65rem;
+  color:var(--muted);text-transform:uppercase;letter-spacing:.12em;
+  padding:.9rem 1rem .5rem;border-bottom:1px solid var(--border);
+}
+.sb-link{
+  display:flex;align-items:center;gap:.6rem;
+  padding:.55rem 1rem;font-family:'DM Sans',sans-serif;font-size:.82rem;
+  color:var(--muted);cursor:pointer;transition:all .15s;
+  border-left:3px solid transparent;
+  text-decoration:none;
+}
+.sb-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.sb-link.active{
+  color:var(--accent);background:rgba(247,129,102,.08);
+  border-left-color:var(--accent);
+}
+.sb-link .sb-num{
+  font-family:'JetBrains Mono',monospace;font-size:.65rem;
+  color:var(--bg3);background:var(--muted);
+  border-radius:3px;padding:1px 5px;min-width:18px;text-align:center;
+  flex-shrink:0;transition:background .15s;
+}
+.sb-link.active .sb-num{background:var(--accent);color:#1f1f1e}
+
+/* ── Hero ── */
+.hero{
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  padding:3.5rem 2rem 2.5rem;text-align:center;
+}
+.hero h1{
+  font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,3rem);
+  color:#ffffff;
+  letter-spacing:.01em;font-weight:700;
+}
+.hero p{font-family:'Playfair Display',serif;font-style:italic;color:var(--muted);margin-top:.5rem;font-size:.92rem}
+.hero-tags{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-top:1.2rem}
+
+/* ── Sections ── */
+.sec{max-width:900px;margin:0 auto;padding:3rem 1.5rem 2.5rem;border-bottom:1px solid var(--border)}
+.sec-tag{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.6rem}
+.sec h2{font-family:'Playfair Display',serif;font-size:1.45rem;letter-spacing:.01em;color:var(--text);margin-bottom:.8rem;font-weight:700}
+.sec-intro{color:var(--muted);margin-bottom:1.8rem;font-size:.97rem;line-height:1.75}
+.sub-h{font-family:'DM Sans',sans-serif;font-style:normal;font-size:1rem;font-weight:600;color:var(--accent3);margin:2rem 0 .8rem;padding-bottom:.3rem;border-bottom:1px solid var(--border)}
+
+/* ── Cards ── */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin:1rem 0}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.2rem;box-shadow:var(--card-glow)}
+.card-title{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem}
+.card.blue .card-title{color:var(--accent3)}
+.card.green .card-title{color:var(--accent4)}
+.card.amber .card-title{color:var(--accent2)}
+.card.red .card-title{color:var(--accent)}
+.card p{font-size:.9rem;color:var(--muted)}
+
+/* ── Highlight boxes ── */
+.hl{background:rgba(88,166,255,.07);border:1px solid rgba(88,166,255,.25);border-radius:6px;padding:.9rem 1.1rem;margin:1rem 0;font-size:.92rem}
+.hl strong{color:var(--accent3)}
+.hl.warn{background:rgba(210,153,34,.07);border:1px solid rgba(210,153,34,.25)}
+.hl.warn strong{color:var(--accent2)}
+.hl.success{background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.25)}
+.hl.success strong{color:var(--accent4)}
+.hl.red{background:rgba(247,129,102,.07);border:1px solid rgba(247,129,102,.25)}
+.hl.red strong{color:var(--accent)}
+
+/* ── Callout ── */
+.callout{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.2rem 1.3rem;margin:1rem 0;position:relative}
+.callout::before{content:attr(data-label);position:absolute;top:-11px;left:14px;background:var(--accent);color:#1f1f1e;font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:.08em;text-transform:uppercase}
+.callout.blue::before{background:var(--accent3)}
+.callout.green::before{background:var(--accent4)}
+.callout.amber::before{background:var(--accent2)}
+
+/* ── Pipeline ── */
+.pipeline{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1rem 0}
+.pipe-box{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:.45rem .9rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--muted)}
+.pipe-box.accent{border-color:var(--accent);color:var(--accent)}
+.pipe-box.blue{border-color:var(--accent3);color:var(--accent3)}
+.pipe-box.green{border-color:var(--accent4);color:var(--accent4)}
+.pipe-box.amber{border-color:var(--accent2);color:var(--accent2)}
+.pipe-arrow{color:var(--muted);font-size:1.1rem}
+
+/* ── Table — bg3 ONLY for cells, NOT header ── */
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.88rem}
+th{background:var(--bg2);color:var(--accent3);font-family:'JetBrains Mono',monospace;font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;padding:.6rem .8rem;border:1px solid var(--border);text-align:left}
+td{padding:.55rem .8rem;border:1px solid var(--border);color:var(--muted);vertical-align:top;background:var(--bg3)}
+td.val{color:var(--text)}
+td.blue{color:var(--accent3)}
+td.green{color:var(--accent4)}
+td.amber{color:var(--accent2)}
+td.acc{color:var(--accent)}
+
+/* ── Math block ── */
+.mb{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.4rem;margin:1rem 0;overflow-x:auto;text-align:center}
+
+/* ── Code block ── */
+.code-block{background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin:1.2rem 0;overflow:hidden}
+.code-header{display:flex;justify-content:space-between;align-items:center;background:var(--bg2);padding:.45rem 1rem;border-bottom:1px solid var(--border)}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent3)}
+.code-copy{background:none;border:1px solid var(--border);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:2px 8px;border-radius:4px;cursor:pointer;transition:all .2s}
+.code-copy:hover{border-color:var(--accent3);color:var(--accent3)}
+pre{background:var(--bg2);padding:1.1rem 1.2rem;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.65;tab-size:4}
+.kw{color:#f47067}.fn{color:#dcbdfb}.st{color:#96d0ff}.cm{color:#636e7b;font-style:italic}
+.nu{color:#6cb6ff}.cl{color:#f69d50}.id2{color:#57ab5a}
+
+/* ── Step navigator ── */
+.step{display:none}.step.on{display:block}
+.step-ctrl{display:flex;align-items:center;gap:1rem;margin:.8rem 0}
+.btn{background:var(--bg2);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.35rem .9rem;border-radius:6px;cursor:pointer;transition:all .2s}
+.btn:hover{border-color:var(--accent3);color:var(--accent3)}
+.step-idx{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--muted)}
+
+/* ── Matrix cells use bg3 ── */
+.mat-wrap{display:flex;flex-wrap:wrap;gap:1.5rem;align-items:flex-start;margin:1rem 0}
+.mat{display:inline-flex;flex-direction:column;gap:3px}
+.mat-row{display:flex;gap:3px}
+.mat-cell{width:46px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--muted)}
+.mat-cell.hl-cell{background:rgba(88,166,255,.18);border-color:var(--accent3);color:var(--accent3)}
+.mat-cell.hl-cell2{background:rgba(63,185,80,.18);border-color:var(--accent4);color:var(--accent4)}
+.mat-cell.hl-cell3{background:rgba(247,129,102,.18);border-color:var(--accent);color:var(--accent)}
+.mat-label{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);text-align:center;margin-top:.4rem}
+
+/* ── Token visual ── */
+.tok-vis{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin:.6rem 0;padding:.6rem}
+.tok-label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);margin-right:.3rem}
+.tok-box{padding:.3rem .6rem;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:.78rem;border:1px solid var(--border)}
+.tok-box.input{background:rgba(88,166,255,.12);border-color:var(--accent3);color:var(--accent3)}
+.tok-box.target{background:rgba(247,129,102,.12);border-color:var(--accent);color:var(--accent)}
+.tok-box.id{background:rgba(210,153,34,.12);border-color:var(--accent2);color:var(--accent2)}
+.tok-box.emb{background:rgba(63,185,80,.12);border-color:var(--accent4);color:var(--accent4)}
+
+/* ── Tags ── */
+.tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.65rem;padding:2px 8px;border-radius:4px;background:rgba(88,166,255,.12);color:var(--accent3);border:1px solid rgba(88,166,255,.25);margin:2px}
+.tag.red{background:rgba(247,129,102,.12);color:var(--accent);border-color:rgba(247,129,102,.25)}
+.tag.green{background:rgba(63,185,80,.12);color:var(--accent4);border-color:rgba(63,185,80,.25)}
+.tag.amber{background:rgba(210,153,34,.12);color:var(--accent2);border-color:rgba(210,153,34,.25)}
+
+/* ── Reveal animation ── */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .5s,transform .5s}
+.reveal.show{opacity:1;transform:none}
+
+/* ── Attention cells (use bg3) ── */
+.attn-row{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin:.3rem 0}
+.attn-cell{min-width:44px;padding:.25rem .4rem;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.75rem;text-align:center;color:var(--muted)}
+.attn-cell.q{border-color:var(--accent2);color:var(--accent2);background:rgba(210,153,34,.12)}
+.attn-cell.score{border-color:var(--accent3);color:var(--accent3);background:rgba(88,166,255,.12)}
+.attn-cell.weight{border-color:var(--accent4);color:var(--accent4);background:rgba(63,185,80,.12)}
+.attn-cell.ctx{border-color:var(--accent);color:var(--accent);background:rgba(247,129,102,.12)}
+.attn-label{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);min-width:90px}
+.arr{color:var(--muted);font-size:1rem;margin:0 .2rem}
+
+/* ── Weighted-sum SVG diagram ── */
+.wsum-diagram{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin:1rem 0;overflow-x:auto}
+.wsum-diagram svg{display:block;margin:0 auto}
+
+/* ── Trainable weight diagram ── */
+.tw-diagram{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin:1rem 0;overflow-x:auto}
+.tw-diagram svg{display:block;margin:0 auto}
+</style>
+</head>
+<body class="sidebar-open">
+
+<!-- ══ TOP NAV ══ -->
+<nav class="topnav">
+  <div class="nav-brand">Attention Mechanism — Deep Learning Notes</div>
+  <button class="nav-toggle" onclick="toggleSidebar()" id="sb-btn">&#8249;&#8249;</button>
+  <div class="nav-divider" style="margin-left:auto"></div>
+  <div class="nav-scrolllinks">
+    <a href="#overview">Overview</a>
+    <a href="#rnn-problem">RNN Problem</a>
+    <a href="#bahdanau">Bahdanau</a>
+    <a href="#self-attention">Self-Attention</a>
+    <a href="#simple-sa">Simple SA</a>
+    <a href="#attn-scores">Attn Scores</a>
+    <a href="#normalize">Normalize</a>
+    <a href="#context-vec">Context Vec</a>
+    <a href="#weight-matrix">Weight Matrix</a>
+    <a href="#summary">Summary</a>
+  </div>
+</nav>
+
+<!-- ══ SIDEBAR ══ -->
+<div id="sidebar" class="open">
+  <div class="sb-title">Deep Learning Notes</div>
+  <a class="sb-link" href="#overview"><span class="sb-num">S1</span>Overview</a>
+  <a class="sb-link" href="#rnn-problem"><span class="sb-num">S2</span>RNN Problem</a>
+  <a class="sb-link" href="#bahdanau"><span class="sb-num">S3</span>Bahdanau 2014</a>
+  <a class="sb-link" href="#self-attention"><span class="sb-num">S4</span>Self-Attention</a>
+  <a class="sb-link" href="#simple-sa"><span class="sb-num">S5</span>Simple SA</a>
+  <a class="sb-link" href="#attn-scores"><span class="sb-num">S6</span>Attn Scores</a>
+  <a class="sb-link" href="#normalize"><span class="sb-num">S7</span>Normalize</a>
+  <a class="sb-link" href="#context-vec"><span class="sb-num">S8</span>Context Vector</a>
+  <a class="sb-link" href="#weight-matrix"><span class="sb-num">S9</span>Weight Matrices</a>
+  <a class="sb-link" href="#summary"><span class="sb-num">S10</span>Summary</a>
+</div>
+
+<!-- ══ HERO ══ -->
+<div class="hero">
+  <h1>Attention Mechanism</h1>
+  <p>From RNN bottlenecks to Transformers — a complete beginner-friendly walkthrough</p>
+  <div class="hero-tags">
+    <span class="tag red">Attention</span>
+    <span class="tag">Self-Attention</span>
+    <span class="tag green">Transformers</span>
+    <span class="tag amber">RNN</span>
+    <span class="tag">Bahdanau 2014</span>
+    <span class="tag red">LLMs</span>
+  </div>
+</div>
+
+<!-- ═══ §1 Overview ═══ -->
+<section class="sec reveal" id="overview">
+  <div class="sec-tag">S1 — Overview</div>
+  <h2>4 Types of Attention in LLMs</h2>
+  <p class="sec-intro">
+    The attention mechanism is the core building block of modern LLMs. There are 4 main variants,
+    each building on the previous. Understanding them in order helps you see why transformers replaced RNNs.
+  </p>
+
+  <div class="sub-h">The 4 Attention Types</div>
+  <div class="card-grid">
+    <div class="card amber">
+      <div class="card-title">1. Simplified Self-Attention</div>
+      <p>No trainable weights. Used to introduce the broad idea of how a token attends to others. Good for learning the concept from scratch.</p>
+    </div>
+    <div class="card blue">
+      <div class="card-title">2. Self-Attention</div>
+      <p>Has trainable weight matrices ($W_Q$, $W_K$, $W_V$). Forms the basis of the full mechanism used in LLMs like GPT.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">3. Multi-Head Attention</div>
+      <p>Runs multiple attention heads in parallel, allowing the model to simultaneously attend to different representation subspaces of the input.</p>
+    </div>
+    <div class="card red">
+      <div class="card-title">4. Causal Attention</div>
+      <p>Each token can only attend to <em>previous and current</em> tokens — not future ones. Used in autoregressive models (GPT family).</p>
+    </div>
+  </div>
+
+  <div class="hl">
+    <strong>Why this order matters:</strong> Each type is a refinement: Simplified SA → SA (add weights) → Multi-Head SA (add parallelism) → Causal SA (add masking). LLMs use Multi-Head Causal Attention.
+  </div>
+
+  <div class="sub-h">What does "Self" in Self-Attention mean?</div>
+  <div class="card-grid">
+    <div class="card blue">
+      <div class="card-title">Traditional Attention</div>
+      <p>Focuses on the relationship between <strong>2 different sequences</strong> — e.g. source sentence vs target sentence in Bahdanau (encoder states ↔ decoder state).</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Self-Attention</div>
+      <p>The mechanism learns relationships between <strong>various parts of the input itself</strong> — such as words within a single sentence. The sequence attends to itself.</p>
+    </div>
+  </div>
+  <div class="hl">
+    <strong>In self-attention</strong>, the "self" refers to the mechanism's ability to compute attention weights by relating different positions within a <em>single</em> input sequence. This is in contrast to traditional attention where the focus is on relationships between different elements of <em>two different</em> sequences.
+  </div>
+
+  <div class="sub-h">The Core Problem: Long Sequence Modelling</div>
+  <div class="pipeline">
+    <div class="pipe-box accent">Input Sentence</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">Encoder</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">Context Vector</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Decoder</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box">Output</div>
+  </div>
+  <p style="color:var(--muted);margin-top:.8rem">The encoder compresses the entire input into a <em>single context vector</em>. For long sequences, this becomes a <strong style="color:var(--accent)">bottleneck</strong>.</p>
+
+  <div class="sub-h">Example: Why Word-by-Word Translation Fails</div>
+  <div class="callout" data-label="German → English">
+    <p style="margin-bottom:.7rem"><span style="color:var(--accent3)">German:</span> <em>Kannst du mir helfen diesen Satz zu übersetzen?</em></p>
+    <div class="tok-vis">
+      <div class="tok-box input">Kannst</div><div class="tok-box input">du</div><div class="tok-box input">mir</div>
+      <div class="tok-box input">helfen</div><div class="tok-box input">diesen</div><div class="tok-box input">Satz</div>
+      <div class="tok-box input">zu</div><div class="tok-box input">übersetzen</div>
+    </div>
+    <div class="arr">↕ word-by-word → <span style="color:var(--accent)">grammatically incorrect</span></div>
+    <div class="tok-vis" style="margin-top:.4rem">
+      <div class="tok-box emb">can</div><div class="tok-box emb">you</div><div class="tok-box emb">me</div>
+      <div class="tok-box emb">help</div><div class="tok-box emb">this</div><div class="tok-box emb">sentence</div>
+      <div class="tok-box emb">to</div><div class="tok-box emb">translate</div>
+    </div>
+  </div>
+
+  <div class="callout blue" data-label="Example 2 — Hindi Translation">
+    <p style="margin-bottom:.5rem"><span style="color:var(--accent3)">English:</span> <em>Can you help me?</em></p>
+    <div class="tok-vis">
+      <div class="tok-box input">Can</div><div class="tok-box input">you</div><div class="tok-box input">help</div><div class="tok-box input">me</div>
+    </div>
+    <div class="arr" style="margin:.4rem 0">↓ word-by-word → <span style="color:var(--accent)">wrong</span> &nbsp;|&nbsp; correct Hindi reorders the words</div>
+    <div class="tok-vis">
+      <div class="tok-box emb">क्या</div><div class="tok-box emb">तुम</div><div class="tok-box emb">मेरी</div><div class="tok-box emb">मदद</div><div class="tok-box emb">करोगे?</div>
+    </div>
+    <p style="color:var(--muted);font-size:.85rem;margin-top:.4rem">Certain words in the generated translation require access to words that appear earlier <em>or</em> later in the original sentence.</p>
+  </div>
+
+  <div class="sub-h">Long-Range Dependency: Why Word Order Matters</div>
+  <div class="callout" data-label="Long Sentence Example">
+    <p style="color:var(--accent3);margin-bottom:.5rem"><em>"The cat that was sitting on the mat, which was next to the dog, jumped."</em></p>
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:.6rem">French: <em>"Le chat qui était assis sur le tapis, qui était à côté du chien, a sauté."</em></p>
+    <p style="color:var(--muted);font-size:.9rem">The key action <strong style="color:var(--accent)">"jumped"</strong> depends on the subject <strong style="color:var(--accent3)">"cat"</strong> — but they are separated by a long relative clause. The model must also understand: "that was sitting on the mat" and "next to the dog".</p>
+  </div>
+  <div class="card-grid">
+    <div class="card red"><div class="card-title">RNN Fails Here</div><p>RNN must compress "the cat…the mat…the dog" into a single fixed vector. By the time it reaches "jumped", context about "cat" has been overwritten.</p></div>
+    <div class="card green"><div class="card-title">Attention Solves This</div><p>At each decoding step the model can look back at the <em>entire</em> input and decide which parts are most relevant. "jumped" can directly attend to "cat" regardless of distance.</p></div>
+  </div>
+
+  <div class="hl warn">
+    <strong>Key Insight:</strong> Certain words in the translation need access to words that appear <em>earlier or later</em> in the original sentence. Word order differs across languages — we need a mechanism that can look at the full sentence at once.
+  </div>
+
+  <div class="sub-h">PyTorch: Encoder-Decoder Concept</div>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Simple Encoder-Decoder Sketch (Conceptual)</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="cm"># Encoder-Decoder: compress input → context → generate output</span>
+<span class="cm"># encoder_out: final hidden state (context vector)</span>
+<span class="cm"># Precondition: vocab_size > 0, embed_dim matches hidden_dim</span>
+<span class="cm"># Time: O(T) encoder steps + O(S) decoder steps</span>
+
+<span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+<span class="kw">class</span> <span class="cl">SimpleEncoder</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="id2">self</span>, vocab_size, embed_dim, hidden_dim):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="id2">self</span>.embed = nn.<span class="cl">Embedding</span>(vocab_size, embed_dim)
+        <span class="id2">self</span>.rnn = nn.<span class="cl">GRU</span>(embed_dim, hidden_dim, batch_first=<span class="kw">True</span>)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="id2">self</span>, token_ids):
+        x = <span class="id2">self</span>.<span class="fn">embed</span>(token_ids)
+        _, h_n = <span class="id2">self</span>.<span class="fn">rnn</span>(x)
+        <span class="kw">return</span> h_n  <span class="cm"># ← bottleneck for long sequences</span>
+
+<span class="cm"># Dry run: token_ids=[5,2,8,1] → embed → [1,4,16] → rnn → h_n [1,1,32]</span>
+encoder = <span class="cl">SimpleEncoder</span>(vocab_size=<span class="nu">1000</span>, embed_dim=<span class="nu">16</span>, hidden_dim=<span class="nu">32</span>)
+tokens = torch.<span class="fn">tensor</span>([[<span class="nu">5</span>, <span class="nu">2</span>, <span class="nu">8</span>, <span class="nu">1</span>]])
+context = encoder.<span class="fn">forward</span>(tokens)
+<span class="fn">print</span>(<span class="st">"context vector shape:"</span>, context.shape)  <span class="cm"># [1, 1, 32]</span></pre>
+  </div>
+</section>
+
+<!-- ═══ §2 RNN Problem ═══ -->
+<section class="sec reveal" id="rnn-problem">
+  <div class="sec-tag">S2 — RNN Problem</div>
+  <h2>RNN Encoder-Decoder Architecture &amp; Its Flaws</h2>
+  <p class="sec-intro">Before transformers, RNNs were the most popular encoder-decoder architecture. Understanding exactly <em>why</em> they fail motivates the attention mechanism.</p>
+
+  <div class="sub-h">How the RNN Encoder-Decoder Works</div>
+  <div class="callout blue" data-label="RNN Encoder">
+    <ol style="color:var(--muted);padding-left:1.2rem;font-size:.9rem;line-height:2">
+      <li>Receives input text (e.g. German sentence)</li>
+      <li>Processes it <em>sequentially</em> — one token at a time</li>
+      <li>At each step, updates its hidden state (internal memory)</li>
+      <li>After the last token, produces a <strong style="color:var(--accent3)">final hidden state</strong> — the context vector</li>
+    </ol>
+  </div>
+  <div class="callout green" data-label="RNN Decoder">
+    <ol style="color:var(--muted);padding-left:1.2rem;font-size:.9rem;line-height:2">
+      <li>Receives the <strong style="color:var(--accent4)">final hidden state</strong> from the encoder (this single vector is all it gets)</li>
+      <li>Updates its own hidden state at each decoding step</li>
+      <li>Generates the output translation one word at a time</li>
+    </ol>
+  </div>
+
+  <div class="sub-h">How RNN Processes Input — Step by Step</div>
+  <div class="callout blue" data-label="RNN Encoder Flow">
+    <ol style="color:var(--muted);padding-left:1.2rem;font-size:.9rem;line-height:2.1">
+      <li>Receive input text (e.g. German sentence)</li>
+      <li>Process it <strong style="color:var(--accent3)">sequentially</strong> — one token at a time, left to right</li>
+      <li>At each step, <strong style="color:var(--accent3)">update the hidden state</strong> $h_t$ using the current token embedding and the previous hidden state: $h_t = f(x_t, h_{t-1})$</li>
+      <li>After the last token, produce a <strong style="color:var(--accent3)">final hidden state</strong> $h_{	ext{final}}$ — the encoder tries to capture the full meaning here</li>
+      <li>The decoder uses <em>only</em> this $h_{	ext{final}}$ to generate the output — one word at a time</li>
+    </ol>
+  </div>
+  <div class="hl warn"><strong>Key issue:</strong> The output from the previous step is fed as input to the current step. This means errors accumulate and early information fades as the sequence grows longer.</div>
+
+  <div class="sub-h">Visual: RNN Flow</div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.3rem;margin:1rem 0;overflow-x:auto">
+    <p style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent3);margin-bottom:.8rem">ENCODER</p>
+    <div class="attn-row">
+      <div class="attn-label">Input:</div>
+      <div class="tok-box input">kannst</div><div class="tok-box input">du</div><div class="tok-box input">mir</div><div class="tok-box input">helfen</div>
+    </div>
+    <div class="attn-row" style="margin-top:.5rem">
+      <div class="attn-label">RNN cells:</div>
+      <div class="attn-cell">h₁</div><span class="arr">→</span>
+      <div class="attn-cell">h₂</div><span class="arr">→</span>
+      <div class="attn-cell">h₃</div><span class="arr">→</span>
+      <div class="attn-cell">h₄</div><span class="arr">→</span>
+      <div class="attn-cell score">h_final</div>
+    </div>
+    <p style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent4);margin:.8rem 0 .4rem">DECODER — only sees h_final</p>
+    <div class="attn-row">
+      <div class="attn-label">Output:</div>
+      <div class="tok-box emb">can</div><div class="tok-box emb">you</div><div class="tok-box emb">help</div>
+    </div>
+  </div>
+
+  <div class="sub-h">The Big Problem: Information Bottleneck</div>
+  <div class="hl red">
+    <strong>Critical Issue:</strong> The RNN compresses the <em>entire</em> input into a <em>single fixed-size vector</em>. For long sentences, crucial early information is overwritten by later tokens.
+  </div>
+  <div class="card-grid">
+    <div class="card red"><div class="card-title">No Direct Access</div><p>Decoder <strong>cannot directly access earlier encoder hidden states</strong> during decoding. It relies solely on the current hidden state $h_{	ext{final}}$.</p></div>
+    <div class="card red"><div class="card-title">Loss of Context</div><p>This leads to loss of context, especially in complex sentences where dependencies span long distances — e.g. "cat…jumped" 8 words apart.</p></div>
+    <div class="card red"><div class="card-title">Single Vector Limit</div><p>Encoder compresses the <em>entire</em> input sequence into a single fixed-size hidden state vector. Very long sentences are simply too much for one vector.</p></div>
+    <div class="card red"><div class="card-title">Sequential Only</div><p>Tokens processed one by one — no parallelism. Slow to train, especially on long inputs.</p></div>
+  </div>
+  <div class="callout" data-label="Concrete Failure Example">
+    <p style="color:var(--muted);font-size:.9rem">"The cat <span style="color:var(--muted)">that was sitting on the mat, which was next to the dog,</span> <strong style="color:var(--accent)">jumped</strong>."</p>
+    <p style="color:var(--muted);font-size:.88rem;margin-top:.5rem">By the time the RNN reaches "jumped", the hidden state has been updated many times and the information about "cat" — the actual subject — has been partially overwritten. RNN works fine for short sentences but struggles for long ones because it has no direct access to previous words in the input.</p>
+  </div>
+
+  <div class="sub-h">Timeline: RNN → Attention</div>
+  <div class="pipeline">
+    <div class="pipe-box amber">RNN (1980s)</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">LSTM (1997)</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">Bahdanau (2014)</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Transformer (2017)</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box accent">GPT/BERT (2018+)</div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Demonstrating the RNN Hidden State Bottleneck</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="cm"># RNN bottleneck: entire sequence compressed to fixed-size vector</span>
+<span class="cm"># h_all: all hidden states [batch, seq_len, hidden] — discarded by plain decoder</span>
+<span class="cm"># h_final: last hidden state — only this goes to decoder</span>
+<span class="kw">import</span> torch, torch.nn <span class="kw">as</span> nn
+
+rnn = nn.<span class="cl">GRU</span>(input_size=<span class="nu">16</span>, hidden_size=<span class="nu">64</span>, batch_first=<span class="kw">True</span>)
+fake_embeddings = torch.<span class="fn">randn</span>(<span class="nu">1</span>, <span class="nu">12</span>, <span class="nu">16</span>)  <span class="cm"># 12-token sentence</span>
+h_all, h_final = rnn(fake_embeddings)
+
+<span class="fn">print</span>(<span class="st">"all hidden states:"</span>, h_all.shape)    <span class="cm"># [1, 12, 64]</span>
+<span class="fn">print</span>(<span class="st">"final context vector:"</span>, h_final.shape) <span class="cm"># [1,  1, 64]  ← bottleneck</span>
+<span class="cm"># 12 tokens → 64 numbers. Lossy for long sequences.</span></pre>
+  </div>
+  <div class="hl success"><strong>Key Takeaway:</strong> The RNN must fit all information into one fixed vector. Attention solves this by giving the decoder direct access to <em>all</em> encoder states with learned weights.</div>
+</section>
+
+<!-- ═══ §3 Bahdanau ═══ -->
+<section class="sec reveal" id="bahdanau">
+  <div class="sec-tag">S3 — Bahdanau Attention</div>
+  <h2>Bahdanau Attention Mechanism (2014)</h2>
+  <p class="sec-intro">Dzmitry Bahdanau et al. modified the encoder-decoder RNN so the decoder could <em>selectively access different parts</em> of the encoder's hidden states at each decoding step.</p>
+
+  <div class="sub-h">How Bahdanau Differs from Vanilla RNN</div>
+  <table>
+    <tr><th>Aspect</th><th>Vanilla RNN Decoder</th><th>Bahdanau Attention</th></tr>
+    <tr><td class="val">Encoder access</td><td>Only final $h_{\text{final}}$</td><td class="green">All encoder hidden states $h_1 \ldots h_n$</td></tr>
+    <tr><td class="val">Context</td><td>Fixed — no updates</td><td class="green">Dynamic at each decoding step</td></tr>
+    <tr><td class="val">Long-range</td><td class="acc">Info is lost</td><td class="green">Direct attend to any position</td></tr>
+    <tr><td class="val">Attn weights</td><td class="acc">None</td><td class="green">Learned per decoding step</td></tr>
+  </table>
+
+  <div class="sub-h">Visualising: Attention Weights as Dotted Lines</div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.3rem;margin:1rem 0;overflow-x:auto">
+    <p style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);margin-bottom:.8rem">Generating "you" — decoder focuses heavily on "du"</p>
+    <div class="attn-row">
+      <div class="attn-label" style="color:var(--accent3)">Encoder:</div>
+      <div class="attn-cell">kannst<br><span style="font-size:.65rem">h₁</span></div>
+      <div class="attn-cell score">du<br><span style="font-size:.65rem">h₂ ★</span></div>
+      <div class="attn-cell">mir<br><span style="font-size:.65rem">h₃</span></div>
+      <div class="attn-cell">helfen<br><span style="font-size:.65rem">h₄</span></div>
+    </div>
+    <div class="attn-row" style="margin-top:.5rem">
+      <div class="attn-label" style="color:var(--accent4)">Weights α:</div>
+      <div class="attn-cell weight">0.05</div>
+      <div class="attn-cell weight" style="font-size:.9rem;font-weight:700">0.82 ↑</div>
+      <div class="attn-cell weight">0.08</div>
+      <div class="attn-cell weight">0.05</div>
+    </div>
+    <div class="attn-row" style="margin-top:.5rem">
+      <div class="attn-label">Decoder:</div>
+      <div class="tok-box emb">can</div>
+      <div class="tok-box target">you ←</div>
+      <div class="tok-box emb">help</div>
+    </div>
+  </div>
+
+  <div class="hl success">
+    <strong>Key Idea — Dotted Line Intuition:</strong> Imagine dotted lines connecting each output token to each input token. The <em>width</em> (thickness) of the dotted line is proportional to how important that input token is for generating the current output token. When generating "you", the thick line goes to "du" — the model learned this alignment.
+  </div>
+  <div class="hl warn">
+    <strong>Why is this better?</strong> Using the attention mechanism, the text-generating decoder part of the network can <em>selectively access</em> all input tokens at each step. Some tokens are more important than others for generating a given output — this importance is determined by the <strong>attention weights</strong>.
+  </div>
+
+  <div class="sub-h">Bridge to Transformers (2017)</div>
+  <div class="callout amber" data-label="Historical Note">
+    <p style="color:var(--muted)">In 2014, Bahdanau attention still required RNNs. Just <strong style="color:var(--accent2)">3 years later</strong>, researchers found that the RNN architecture is not required at all for building deep neural networks for NLP. The original Transformer architecture (Vaswani et al., 2017 — "Attention Is All You Need") proposed a <strong style="color:var(--accent2)">self-attention mechanism inspired by Bahdanau</strong> — but without any RNNs whatsoever.</p>
+  </div>
+  <div class="pipeline">
+    <div class="pipe-box amber">Bahdanau (2014)</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">Remove RNN</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box accent">Self-Attention (2017)</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box green">GPT / BERT (2018+)</div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Bahdanau Attention Score Calculation</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="cm"># Bahdanau attention: score each encoder state vs current decoder state</span>
+<span class="cm"># Time: O(src_len) per decoding step</span>
+<span class="kw">import</span> torch, torch.nn <span class="kw">as</span> nn, torch.nn.functional <span class="kw">as</span> F
+
+<span class="kw">class</span> <span class="cl">BahdanauAttention</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="id2">self</span>, hidden_dim):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="id2">self</span>.score_net = nn.<span class="cl">Linear</span>(hidden_dim * <span class="nu">2</span>, <span class="nu">1</span>)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="id2">self</span>, encoder_states, decoder_state):
+        src_len = encoder_states.shape[<span class="nu">1</span>]
+        dec_expanded = decoder_state.<span class="fn">expand</span>(-<span class="nu">1</span>, src_len, -<span class="nu">1</span>)
+        combined = torch.<span class="fn">cat</span>([encoder_states, dec_expanded], dim=-<span class="nu">1</span>)
+        scores = <span class="id2">self</span>.<span class="fn">score_net</span>(combined)
+        attn_weights = F.<span class="fn">softmax</span>(scores, dim=<span class="nu">1</span>)
+        context = (attn_weights * encoder_states).<span class="fn">sum</span>(dim=<span class="nu">1</span>, keepdim=<span class="kw">True</span>)
+        <span class="kw">return</span> context, attn_weights
+
+<span class="cm"># Dry run: enc[1,4,32] × dec[1,1,32] → weights[1,4,1] → ctx[1,1,32]</span>
+attn = <span class="cl">BahdanauAttention</span>(hidden_dim=<span class="nu">32</span>)
+enc = torch.<span class="fn">randn</span>(<span class="nu">1</span>, <span class="nu">4</span>, <span class="nu">32</span>)
+dec = torch.<span class="fn">randn</span>(<span class="nu">1</span>, <span class="nu">1</span>, <span class="nu">32</span>)
+ctx, weights = attn.<span class="fn">forward</span>(enc, dec)
+<span class="fn">print</span>(<span class="st">"context:"</span>, ctx.shape, <span class="st">"weights:"</span>, weights.<span class="fn">squeeze</span>())</pre>
+  </div>
+  <div class="hl success"><strong>Key Result:</strong> Bahdanau gives the decoder a <em>dynamic, step-dependent</em> view of the input. Huge improvement — but still tied to RNNs. Transformer (2017) removed the RNN entirely.</div>
+</section>
+
+<!-- ═══ §4 Self-Attention ═══ -->
+<section class="sec reveal" id="self-attention">
+  <div class="sec-tag">S4 — Self-Attention</div>
+  <h2>Self-Attention — The Heart of Transformers</h2>
+  <p class="sec-intro">Self-attention allows each position in the input sequence to attend to <em>all other positions in the same sequence</em>. It is the key component of GPT, BERT, and all modern LLMs.</p>
+
+  <div class="sub-h">What Makes It "Self"?</div>
+  <div class="card-grid">
+    <div class="card blue">
+      <div class="card-title">Traditional Attention</div>
+      <p>Relates elements between <strong>2 different sequences</strong> (source → target, as in Bahdanau).</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Self-Attention</div>
+      <p>Relates elements <strong>within the same sequence</strong>. The input attends to itself — hence "self".</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Transformer Pipeline</div>
+  <div class="pipeline">
+    <div class="pipe-box blue">Input Text</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">Preprocessing</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box accent">Self-Attention</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Postprocessing</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Output Text</div>
+  </div>
+
+  <div class="sub-h">Why Self-Attention Beats RNN for Long-Range</div>
+  <div class="hl warn"><strong>Dynamic focus:</strong> At each position, the model assigns different importance weights to every other position — directly relating "cat" and "jumped" even 10 words apart, no bottleneck.</div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Self-Attention Pipeline (Conceptual)</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="cm"># Q=K=V=x in self-attention (same sequence for all three)</span>
+<span class="kw">import</span> torch, torch.nn <span class="kw">as</span> nn
+
+d_model = <span class="nu">64</span>
+attn_layer = nn.<span class="cl">MultiheadAttention</span>(embed_dim=d_model, num_heads=<span class="nu">4</span>, batch_first=<span class="kw">True</span>)
+x = torch.<span class="fn">randn</span>(<span class="nu">1</span>, <span class="nu">5</span>, d_model)  <span class="cm"># "your journey starts one step" — 5 tokens</span>
+
+attn_out, attn_weights = attn_layer(x, x, x)  <span class="cm"># Q=K=V=x</span>
+<span class="fn">print</span>(<span class="st">"input:"</span>, x.shape)              <span class="cm"># [1, 5, 64]</span>
+<span class="fn">print</span>(<span class="st">"output:"</span>, attn_out.shape)      <span class="cm"># [1, 5, 64]</span>
+<span class="fn">print</span>(<span class="st">"attn weights:"</span>, attn_weights.shape)  <span class="cm"># [1, 5, 5]</span></pre>
+  </div>
+  <div class="hl success"><strong>Self-attention computes attention weights by relating different positions within a single input sequence.</strong> No separate source/target pair needed.</div>
+
+  <div class="sub-h">Formal Definition</div>
+  <div class="hl">
+    <strong>Self-attention</strong> is a mechanism that allows each position of the input sequence to attend to <em>all</em> positions in the same sequence when computing a representation of that sequence.
+  </div>
+  <div class="card-grid">
+    <div class="card amber">
+      <div class="card-title">Key Property 1 — All Positions</div>
+      <p>Every token can directly attend to every other token, regardless of distance. No bottleneck, no fading memory.</p>
+    </div>
+    <div class="card blue">
+      <div class="card-title">Key Property 2 — Parallel</div>
+      <p>Unlike RNNs, all attention computations happen <em>in parallel</em>. This is why Transformers train so much faster.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Key Property 3 — Context-Aware</div>
+      <p>Each output vector (context vector) encodes information about the token <em>and</em> its relationships to all other tokens.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Dynamic Focus: Long-Range Dependencies</div>
+  <div class="callout blue" data-label="Self-Attention in Action">
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:.5rem">Consider: <em>"The cat that was sitting on the mat, which was next to the dog, jumped."</em></p>
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:.3rem">→ At each decoding step, the model can look back at the <strong style="color:var(--accent3)">entire input sequence</strong> and decide which parts are most relevant.</p>
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:.3rem">→ When predicting the next word after "jumped", the attention mechanism focuses on <strong style="color:var(--accent3)">"cat"</strong> — even though they are far apart.</p>
+    <p style="color:var(--muted);font-size:.9rem">→ Dynamic focus on different parts of the input allows the model to learn long-range dependencies more effectively than any RNN.</p>
+  </div>
+
+  <div class="sub-h">Self-Attention as Key Component of Modern LLMs</div>
+  <div class="hl success">
+    <strong>Self-attention is the key component of contemporary LLMs</strong> based on the Transformer architecture — GPT series, BERT, LLaMA, and all modern language models. It replaced RNNs because it handles long-range dependencies directly, trains in parallel, and scales efficiently with data and compute.
+  </div>
+</section>
+
+<!-- ═══ §5 Simple SA ═══ -->
+<section class="sec reveal" id="simple-sa">
+  <div class="sec-tag">S5 — Simple Self-Attention</div>
+  <h2>Simple Self-Attention — Step by Step</h2>
+  <p class="sec-intro">In this section we implement a simple variant of self-attention, free from any trainable weights. The goal is to understand the raw mechanics before adding learnable parameters. We work through computing context vectors for all tokens in "your journey starts one step".</p>
+
+  <div class="sub-h">1. Input Sequence — Formal Definition</div>
+  <div class="hl">
+    $$x = [x^1, x^2, \dots, x^T]$$
+    Each $x^i$ is a <strong>token embedding</strong> for the $i$-th token in the input. In this example, each token embedding is a <strong>3-dimensional vector</strong> (in real GPT models, $d = 768$ or more).
+  </div>
+
+  <div class="callout blue" data-label="Example Sentence">
+    <p style="margin-bottom:.5rem"><strong style="color:var(--accent3)">"your journey starts one step"</strong> — 5 tokens, $T = 5$, $d = 3$</p>
+    <p style="color:var(--muted);font-size:.88rem">Each word is mapped to a 3-dimensional token embedding vector (these would normally come from a learned embedding table)</p>
+  </div>
+
+  <div class="mat-wrap">
+    <div>
+      <div class="mat">
+        <div class="mat-row"><div class="mat-cell hl-cell">0.4</div><div class="mat-cell hl-cell">0.1</div><div class="mat-cell hl-cell">0.8</div></div>
+        <div class="mat-row"><div class="mat-cell hl-cell2">0.5</div><div class="mat-cell hl-cell2">0.2</div><div class="mat-cell hl-cell2">0.1</div></div>
+        <div class="mat-row"><div class="mat-cell">0.5</div><div class="mat-cell">0.3</div><div class="mat-cell">0.0</div></div>
+        <div class="mat-row"><div class="mat-cell">0.2</div><div class="mat-cell">0.5</div><div class="mat-cell">0.4</div></div>
+        <div class="mat-row"><div class="mat-cell">0.0</div><div class="mat-cell">0.8</div><div class="mat-cell">0.9</div></div>
+      </div>
+      <div class="mat-label">X [5×3] — Blue = $x^1$ (your), Green = $x^2$ (journey)</div>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--muted);line-height:2.5;padding:.3rem 0">
+      <div>$x^1 = [0.4,\; 0.1,\; 0.8]$ &nbsp; ← "your"</div>
+      <div>$x^2 = [0.5,\; 0.2,\; 0.1]$ &nbsp; ← "journey"</div>
+      <div>$x^3 = [0.5,\; 0.3,\; 0.0]$ &nbsp; ← "starts"</div>
+      <div>$x^4 = [0.2,\; 0.5,\; 0.4]$ &nbsp; ← "one"</div>
+      <div>$x^5 = [0.0,\; 0.8,\; 0.9]$ &nbsp; ← "step"</div>
+    </div>
+  </div>
+
+  <div class="sub-h">2. Goal of Simple Self-Attention</div>
+  <div class="hl">
+    <strong>Goal:</strong> Calculate a <em>context vector</em> $z^i$ for each input token embedding $x^i$.
+  </div>
+  <div class="card-grid">
+    <div class="card blue">
+      <div class="card-title">What is $z^i$?</div>
+      <p>A context vector is an <strong>enriched embedding</strong> that encodes: (1) information about $x^i$ itself, and (2) context of <em>all other tokens</em> $x^1 \dots x^T$ in the sequence.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Why do we need it?</div>
+      <p>The raw embedding $x^i$ has no knowledge of surrounding words. The context vector $z^i$ is <strong>context-aware</strong> — the same word gets a different $z^i$ depending on its neighbours.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">Trainable Weights Later</div>
+      <p>In simple SA there are <strong>no trainable weights</strong>. Later we add $W_Q$, $W_K$, $W_V$ so the model <em>learns</em> to construct useful context vectors for predicting the next token.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Focus Example: Second Token $x^2$ ("journey")</div>
+  <div class="callout blue" data-label="Focus: x²">
+    <p style="color:var(--muted);font-size:.9rem;line-height:1.9">
+      For token $x^2$, the corresponding context vector is $z^2$. This vector will summarize:<br>
+      — the content of $x^2$ itself ("journey")<br>
+      — contextual relationships with all other tokens $x^1, x^3, x^4, x^5$<br><br>
+      This makes $z^2$ a <strong style="color:var(--accent3)">context-aware representation</strong> of token 2. The same process is then repeated for every other token to produce $z^1, z^3, z^4, z^5$.
+    </p>
+  </div>
+
+  <div class="sub-h">The 3 Steps of Simple Self-Attention</div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin:1rem 0">
+    <div class="step on" id="ssa-1">
+      <div class="sec-tag">STEP 1 of 3</div>
+      <div class="sub-h" style="margin-top:.4rem">Compute Attention Scores ω</div>
+      <p style="color:var(--muted);margin-bottom:.8rem">Dot product between query token x² and every token in the sequence.</p>
+      <div class="mb">
+        $$\omega_{2i} = x^2 \cdot x^i \qquad \omega_{21} = [0.5,0.2,0.1]\cdot[0.4,0.1,0.8] = 0.30$$
+        $$\omega_{22} = [0.5,0.2,0.1]\cdot[0.5,0.2,0.1] = 0.30 \qquad \omega_{23} = 0.31$$
+      </div>
+      <div class="hl"><strong>Dot product = similarity.</strong> Higher dot product → vectors more aligned → tokens more related.</div>
+    </div>
+    <div class="step" id="ssa-2">
+      <div class="sec-tag">STEP 2 of 3</div>
+      <div class="sub-h" style="margin-top:.4rem">Normalize → Attention Weights α</div>
+      <p style="color:var(--muted);margin-bottom:.8rem">Apply softmax to raw scores to convert them into probabilities.</p>
+      <div class="mb">
+        $$\alpha_{2i} = \frac{e^{\omega_{2i}}}{\sum_j e^{\omega_{2j}}}$$
+        $$[\omega_{21},\dots] = [0.9,1.4,1.4,\dots,1.0] \xrightarrow{\text{softmax}} [\alpha_{21},\dots] = [0.1,0.2,0.2,\dots,0.1]$$
+        $$\sum_i \alpha_{2i} = 1.0$$
+      </div>
+      <div class="hl warn"><strong>Why softmax?</strong> Forces all weights ∈ [0,1] and sum=1 — interpretable as "percentage of attention".</div>
+    </div>
+    <div class="step" id="ssa-3">
+      <div class="sec-tag">STEP 3 of 3</div>
+      <div class="sub-h" style="margin-top:.4rem">Compute Context Vector z²</div>
+      <p style="color:var(--muted);margin-bottom:.8rem">Multiply each embedding by its attention weight, sum all results.</p>
+      <div class="mb">
+        $$z^2 = \sum_{i=1}^{T} \alpha_{2i} \cdot x^i = 0.1\cdot x^1 + 0.2\cdot x^2 + 0.2\cdot x^3 + \dots \approx [0.4,\,0.6,\,0.5]$$
+      </div>
+      <div class="hl success"><strong>z² = [0.4, 0.6, 0.5]</strong> — context-aware representation of "journey", aggregating info from the full sequence.</div>
+    </div>
+    <div class="step-ctrl">
+      <button class="btn" onclick="stepNav('ssa',1,3,-1)">← Prev</button>
+      <span class="step-idx" id="ssa-idx">Step 1 of 3</span>
+      <button class="btn" onclick="stepNav('ssa',1,3,1)">Next →</button>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Simple Self-Attention (No Trainable Weights)</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="cm"># X [T,d] → omega [T,T] → alpha [T,T] → Z [T,d]</span>
+<span class="cm"># Time: O(T² × d) | Space: O(T²)</span>
+<span class="kw">import</span> torch, torch.nn.functional <span class="kw">as</span> F
+
+X = torch.<span class="fn">tensor</span>([
+    [<span class="nu">0.4</span>, <span class="nu">0.1</span>, <span class="nu">0.8</span>],  <span class="cm"># x1: your</span>
+    [<span class="nu">0.5</span>, <span class="nu">0.2</span>, <span class="nu">0.1</span>],  <span class="cm"># x2: journey  ← query</span>
+    [<span class="nu">0.5</span>, <span class="nu">0.3</span>, <span class="nu">0.0</span>],  <span class="cm"># x3: starts</span>
+    [<span class="nu">0.2</span>, <span class="nu">0.5</span>, <span class="nu">0.4</span>],  <span class="cm"># x4: one</span>
+    [<span class="nu">0.0</span>, <span class="nu">0.8</span>, <span class="nu">0.9</span>],  <span class="cm"># x5: step</span>
+])  <span class="cm"># [5, 3]</span>
+
+omega = X @ X.T                       <span class="cm"># [5,5] raw scores</span>
+alpha = F.<span class="fn">softmax</span>(omega, dim=-<span class="nu">1</span>)    <span class="cm"># [5,5] weights</span>
+Z     = alpha @ X                     <span class="cm"># [5,3] context vectors</span>
+
+<span class="fn">print</span>(<span class="st">"alpha:\n"</span>, alpha.<span class="fn">round</span>(decimals=<span class="nu">2</span>))
+<span class="fn">print</span>(<span class="st">"z2 (journey):"</span>, Z[<span class="nu">1</span>])</pre>
+  </div>
+</section>
+
+<!-- ═══ §6 Attention Scores ═══ -->
+<section class="sec reveal" id="attn-scores">
+  <div class="sec-tag">S6 — Attention Scores</div>
+  <h2>Step 1: Computing Attention Scores ω</h2>
+  <p class="sec-intro">The first concrete step of self-attention: computing <em>attention scores</em> (ω, omega) measuring raw relevance between every pair of tokens using the dot product.</p>
+
+  <div class="sub-h">The Dot Product Formula</div>
+  <div class="mb">
+    $$\omega_{2i} = x^2 \cdot x^i = \sum_{k=1}^{d} x^2_k \cdot x^i_k$$
+  </div>
+  <p style="color:var(--muted);margin-bottom:.8rem">The dot product measures <strong>geometric similarity</strong> — how much two vectors point in the same direction. A higher score means the two tokens are more related.</p>
+
+  <div class="sub-h">Full Calculation: All 5 Scores for Query $x^2$</div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.3rem;margin:1rem 0">
+    <p style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent2);margin-bottom:1rem">Query: $x^2 = [0.5,\; 0.2,\; 0.1]$ — "journey"</p>
+    <div class="mb">
+      $$\omega_{21} = x^2 \cdot x^1 = (0.5)(0.4) + (0.2)(0.1) + (0.1)(0.8) = 0.20 + 0.02 + 0.08 = \mathbf{0.30}$$
+      $$\omega_{22} = x^2 \cdot x^2 = (0.5)(0.5) + (0.2)(0.2) + (0.1)(0.1) = 0.25 + 0.04 + 0.01 = \mathbf{0.30}$$
+      $$\omega_{23} = x^2 \cdot x^3 = (0.5)(0.5) + (0.2)(0.3) + (0.1)(0.0) = 0.25 + 0.06 + 0.00 = \mathbf{0.31}$$
+      $$\omega_{24} = x^2 \cdot x^4 = (0.5)(0.2) + (0.2)(0.5) + (0.1)(0.4) = 0.10 + 0.10 + 0.04 = \mathbf{0.24}$$
+      $$\omega_{25} = x^2 \cdot x^5 = (0.5)(0.0) + (0.2)(0.8) + (0.1)(0.9) = 0.00 + 0.16 + 0.09 = \mathbf{0.25}$$
+    </div>
+    <div class="hl warn" style="margin-top:.5rem"><strong>Resulting score vector:</strong> $\omega_{2,:} = [0.30,\ 0.30,\ 0.31,\ 0.24,\ 0.25]$<br>Notice $\omega_{23}$ is slightly highest — "starts" is most similar to "journey" in this embedding space. These are the raw scores, not yet probabilities.</div>
+  </div>
+
+  <div class="sub-h">Visualisation: Scores for Query x² ("journey")</div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.2rem;margin:1rem 0;overflow-x:auto">
+    <p style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent2);margin-bottom:.8rem">Query x² = [0.5, 0.2, 0.1]</p>
+    <div class="attn-row">
+      <div class="attn-label">Tokens:</div>
+      <div class="attn-cell">x¹ your</div><div class="attn-cell score">x² journey</div>
+      <div class="attn-cell">x³ starts</div><span class="arr">…</span><div class="attn-cell">xᵀ step</div>
+    </div>
+    <div class="attn-row" style="margin-top:.5rem">
+      <div class="attn-label">Scores ω:</div>
+      <div class="attn-cell q">ω₂₁=0.30</div><div class="attn-cell q">ω₂₂=0.30</div>
+      <div class="attn-cell q">ω₂₃=0.31</div><span class="arr">…</span><div class="attn-cell q">ω₂ₜ</div>
+    </div>
+    <p style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);margin-top:.6rem">ω₂₂ (self-score) is high — same vector dotted with itself</p>
+  </div>
+
+  <div class="sub-h">Interpreting Dot Product Values</div>
+  <table>
+    <tr><th>Value</th><th>Meaning</th><th>Attention Effect</th></tr>
+    <tr><td class="val">High positive</td><td>Vectors very aligned / similar</td><td class="green">High weight → more influence</td></tr>
+    <tr><td class="val">Near zero</td><td>Orthogonal (unrelated)</td><td>Low weight → little influence</td></tr>
+    <tr><td class="val">High negative</td><td>Opposite directions</td><td class="acc">Near-zero after softmax → ignored</td></tr>
+  </table>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Attention Score Calculation (Step 1)</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="cm"># omega = X @ x2  →  one score per token pair</span>
+<span class="cm"># Time: O(T × d) for one query</span>
+<span class="kw">import</span> torch
+
+X = torch.<span class="fn">tensor</span>([
+    [<span class="nu">0.4</span>, <span class="nu">0.1</span>, <span class="nu">0.8</span>], [<span class="nu">0.5</span>, <span class="nu">0.2</span>, <span class="nu">0.1</span>],
+    [<span class="nu">0.5</span>, <span class="nu">0.3</span>, <span class="nu">0.0</span>], [<span class="nu">0.2</span>, <span class="nu">0.5</span>, <span class="nu">0.4</span>], [<span class="nu">0.0</span>, <span class="nu">0.8</span>, <span class="nu">0.9</span>],
+])
+
+x2 = X[<span class="nu">1</span>]       <span class="cm"># "journey"</span>
+omega = X @ x2  <span class="cm"># [5] — dot(x2, each xi)</span>
+
+tokens = [<span class="st">"your"</span>, <span class="st">"journey"</span>, <span class="st">"starts"</span>, <span class="st">"one"</span>, <span class="st">"step"</span>]
+<span class="kw">for</span> i, (t, s) <span class="kw">in</span> <span class="fn">enumerate</span>(<span class="fn">zip</span>(tokens, omega)):
+    <span class="fn">print</span>(<span class="fn">f</span><span class="st">"omega_2{i+1} ({t}): {s:.4f}"</span>)</pre>
+  </div>
+</section>
+
+<!-- ═══ §7 Normalize ═══ -->
+<section class="sec reveal" id="normalize">
+  <div class="sec-tag">S7 — Normalize</div>
+  <h2>Step 2: Normalizing Attention Scores → Weights</h2>
+  <p class="sec-intro">Raw scores ω can be any real number. We must normalize them into probabilities α ∈ [0,1] that sum to 1. The standard approach is <strong>softmax</strong>.</p>
+
+  <div class="sub-h">The Softmax Function</div>
+  <div class="mb">
+    $$\text{softmax}(x_i) = \frac{e^{x_i}}{\sum_{j=1}^{n} e^{x_j}}$$
+    $$\text{All outputs} \in [0,1] \quad \text{and} \quad \sum_i \text{softmax}(x_i) = 1$$
+  </div>
+
+  <div class="callout green" data-label="Why Softmax?">
+    <ul style="color:var(--muted);padding-left:1.2rem;font-size:.9rem;line-height:2">
+      <li><strong style="color:var(--accent4)">Bounded:</strong> All outputs ∈ [0,1] — interpretable as probabilities</li>
+      <li><strong style="color:var(--accent4)">Sums to 1:</strong> Total attention always 100%, split across tokens</li>
+      <li><strong style="color:var(--accent4)">Differentiable:</strong> Allows gradient-based training</li>
+      <li><strong style="color:var(--accent4)">Amplifies differences:</strong> Higher scores get disproportionately more weight</li>
+    </ul>
+  </div>
+
+  <div class="sub-h">Applying Softmax to Our Example — Full Calculation</div>
+  <p style="color:var(--muted);margin-bottom:.8rem">Using the scores computed in S6: $\omega_{2,:} = [0.30,\ 0.30,\ 0.31,\ 0.24,\ 0.25]$</p>
+  <div class="mb">
+    $$\text{sum of exponentials} = e^{0.30} + e^{0.30} + e^{0.31} + e^{0.24} + e^{0.25}$$
+    $$= 1.350 + 1.350 + 1.363 + 1.271 + 1.284 = 6.618$$
+  </div>
+  <div class="mb">
+    $$\alpha_{21} = \frac{e^{0.30}}{6.618} = \frac{1.350}{6.618} \approx 0.204 \quad \alpha_{22} = \frac{e^{0.30}}{6.618} \approx 0.204$$
+    $$\alpha_{23} = \frac{e^{0.31}}{6.618} = \frac{1.363}{6.618} \approx 0.206 \quad \alpha_{24} = \frac{e^{0.24}}{6.618} \approx 0.192 \quad \alpha_{25} = \frac{e^{0.25}}{6.618} \approx 0.194$$
+  </div>
+
+  <div class="attn-row"><div class="attn-label">Raw ω:</div><div class="attn-cell q">0.30</div><div class="attn-cell q">0.30</div><div class="attn-cell q">0.31</div><div class="attn-cell q">0.24</div><div class="attn-cell q">0.25</div></div>
+  <div style="text-align:center;color:var(--muted);margin:.3rem 0">↓ softmax ↓</div>
+  <div class="attn-row"><div class="attn-label">Weights α:</div><div class="attn-cell weight">0.204</div><div class="attn-cell weight">0.204</div><div class="attn-cell weight">0.206</div><div class="attn-cell weight">0.192</div><div class="attn-cell weight">0.194</div></div>
+  <div class="hl success" style="margin-top:.8rem">
+    <strong>Check:</strong> $0.204 + 0.204 + 0.206 + 0.192 + 0.194 = 1.000$ ✓ — always sums to 1.<br>
+    <strong>Observation:</strong> The scores are very close together (all near 0.3), so the softmax weights are nearly uniform — "journey" attends to all tokens roughly equally. In models with trained $W_Q, W_K, W_V$, scores would differ much more.
+  </div>
+
+  <div class="sub-h">★ Numerical Stability Trick: Subtract Max</div>
+  <div class="callout amber" data-label="Numerical Stability Trick">
+    <p style="color:var(--muted);margin-bottom:.6rem"><strong style="color:var(--accent2)">Problem:</strong> If scores are large (e.g. 400), $e^{400}$ causes floating-point overflow (infinity). PyTorch and TensorFlow both use this trick internally.</p>
+    <p style="color:var(--muted);margin-bottom:.6rem"><strong style="color:var(--accent2)">Solution:</strong> Subtract the max value from all scores before applying the exponential. This does <em>not</em> change the output, but keeps all exponentials within a safe numerical range.</p>
+    <div class="mb">
+      $$\text{Stable Softmax}(x_i) = \frac{e^{x_i - \max(x)}}{\sum_j e^{x_j - \max(x)}}$$
+    </div>
+    <p style="color:var(--accent2);font-size:.88rem;margin-bottom:.3rem"><strong>Example 1:</strong> Inputs $[1, 2, 3]$ → subtract max (3) → $[-2, -1, 0]$</p>
+    <div class="mb">
+      $$e^{[-2,-1,0]} = [0.135,\ 0.368,\ 1.000] \quad \text{sum} = 1.503$$
+      $$\text{Softmax} = [0.09,\ 0.24,\ 0.66] \quad \checkmark$$
+    </div>
+    <p style="color:var(--accent2);font-size:.88rem;margin-bottom:.3rem"><strong>Example 2:</strong> Inputs $[400, 1, 2]$ → without stability: $e^{400} = $ overflow ✗</p>
+    <div class="mb">
+      $$[400,1,2] - 400 = [0, -399, -398] \rightarrow e^{[0,-399,-398]} \approx [1.0, \approx 0, \approx 0]$$
+      $$\text{Softmax} = [0.99,\ 0.00,\ 0.00] \quad \checkmark \text{ no overflow}$$
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Input</th><th>Naive Softmax</th><th>Stable (subtract max)</th></tr>
+    <tr><td class="val">[1, 2, 3]</td><td class="green">[0.09, 0.24, 0.66]</td><td class="green">[0.09, 0.24, 0.66] ✓</td></tr>
+    <tr><td class="val">[400, 1, 2]</td><td class="acc">e^400 = overflow ✗</td><td class="green">[0.99, 0.00, 0.00] ✓</td></tr>
+  </table>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Softmax Normalization with Numerical Stability</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch, torch.nn.functional <span class="kw">as</span> F
+
+omega = torch.<span class="fn">tensor</span>([<span class="nu">0.9</span>, <span class="nu">1.4</span>, <span class="nu">1.4</span>, <span class="nu">1.1</span>, <span class="nu">1.0</span>])
+alpha = F.<span class="fn">softmax</span>(omega, dim=<span class="nu">0</span>)  <span class="cm"># internally subtracts max</span>
+
+<span class="fn">print</span>(<span class="st">"omega:"</span>, omega)
+<span class="fn">print</span>(<span class="st">"alpha:"</span>, alpha.<span class="fn">round</span>(decimals=<span class="nu">3</span>))
+<span class="fn">print</span>(<span class="st">"sum:"</span>,   alpha.<span class="fn">sum</span>().<span class="fn">item</span>())  <span class="cm"># 1.0</span>
+
+<span class="cm"># Manual stable softmax</span>
+omega_safe   = omega - omega.<span class="fn">max</span>()
+alpha_manual = omega_safe.<span class="fn">exp</span>() / omega_safe.<span class="fn">exp</span>().<span class="fn">sum</span>()
+<span class="fn">print</span>(<span class="st">"manual:"</span>, alpha_manual.<span class="fn">round</span>(decimals=<span class="nu">3</span>))</pre>
+  </div>
+  <div class="hl success"><strong>After softmax:</strong> Attention weights α ∈ [0,1] summing to 1. Each α₂ᵢ = "how much attention journey pays to token i". Ready for step 3.</div>
+</section>
+
+<!-- ═══ §8 Context Vector ═══ -->
+<section class="sec reveal" id="context-vec">
+  <div class="sec-tag">S8 — Context Vector</div>
+  <h2>Step 3: Computing the Context Vector z²</h2>
+  <p class="sec-intro">We have attention weights α summing to 1. The final step: compute z² — a weighted sum of all input token embeddings. This is the core of the "attend and aggregate" operation.</p>
+
+  <div class="sub-h">The Weighted Sum Formula</div>
+  <div class="mb">
+    $$z^i = \sum_{j=1}^{T} \alpha_{ij} \cdot x^j$$
+  </div>
+  <p style="color:var(--muted);margin-bottom:.8rem">For each token $i$, we multiply its attention weights by the corresponding token embeddings and sum everything together. This produces one context vector per token.</p>
+  <div class="mb">
+    $$z^2 = \alpha_{21}\cdot x^1 + \alpha_{22}\cdot x^2 + \alpha_{23}\cdot x^3 + \alpha_{24}\cdot x^4 + \alpha_{25}\cdot x^5$$
+  </div>
+
+  <div class="sub-h">Diagram: Weighted Sum for z² (from handwritten notes)</div>
+
+  <!-- SVG DIAGRAM: weighted sum like the notebook sketch -->
+  <div class="wsum-diagram">
+    <svg width="680" height="320" viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg"
+         font-family="JetBrains Mono, monospace" font-size="11">
+
+      <!-- Colors -->
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#8b949e"/>
+        </marker>
+        <marker id="arr-grn" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#3fb950"/>
+        </marker>
+      </defs>
+
+      <!-- Token boxes (top row) -->
+      <!-- x1 your -->
+      <rect x="20" y="20" width="90" height="38" rx="5" fill="#1f1f1e" stroke="#58a6ff" stroke-width="1.2"/>
+      <text x="65" y="35" text-anchor="middle" fill="#58a6ff" font-size="10">x¹ "your"</text>
+      <text x="65" y="50" text-anchor="middle" fill="#8b949e" font-size="9">[0.4, 0.1, 0.8]</text>
+
+      <!-- x2 journey -->
+      <rect x="130" y="20" width="100" height="38" rx="5" fill="#1f1f1e" stroke="#3fb950" stroke-width="1.8"/>
+      <text x="180" y="35" text-anchor="middle" fill="#3fb950" font-size="10">x² "journey"</text>
+      <text x="180" y="50" text-anchor="middle" fill="#8b949e" font-size="9">[0.5, 0.2, 0.1]</text>
+
+      <!-- x3 starts -->
+      <rect x="250" y="20" width="90" height="38" rx="5" fill="#1f1f1e" stroke="#58a6ff" stroke-width="1.2"/>
+      <text x="295" y="35" text-anchor="middle" fill="#58a6ff" font-size="10">x³ "starts"</text>
+      <text x="295" y="50" text-anchor="middle" fill="#8b949e" font-size="9">[0.5, 0.3, 0.0]</text>
+
+      <!-- x4 one -->
+      <rect x="360" y="20" width="80" height="38" rx="5" fill="#1f1f1e" stroke="#58a6ff" stroke-width="1.2"/>
+      <text x="400" y="35" text-anchor="middle" fill="#58a6ff" font-size="10">x⁴ "one"</text>
+      <text x="400" y="50" text-anchor="middle" fill="#8b949e" font-size="9">[0.2, 0.5, 0.4]</text>
+
+      <!-- x5 step -->
+      <rect x="460" y="20" width="80" height="38" rx="5" fill="#1f1f1e" stroke="#58a6ff" stroke-width="1.2"/>
+      <text x="500" y="35" text-anchor="middle" fill="#58a6ff" font-size="10">x⁵ "step"</text>
+      <text x="500" y="50" text-anchor="middle" fill="#8b949e" font-size="9">[0.0, 0.8, 0.9]</text>
+
+      <!-- Weight labels (middle row) -->
+      <rect x="30" y="90" width="70" height="26" rx="4" fill="rgba(247,129,102,0.12)" stroke="#f78166" stroke-width="1"/>
+      <text x="65" y="107" text-anchor="middle" fill="#f78166" font-size="11">α=0.10</text>
+
+      <rect x="140" y="90" width="80" height="26" rx="4" fill="rgba(63,185,80,0.18)" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="180" y="107" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="bold">α=0.20 ★</text>
+
+      <rect x="258" y="90" width="70" height="26" rx="4" fill="rgba(247,129,102,0.12)" stroke="#f78166" stroke-width="1"/>
+      <text x="293" y="107" text-anchor="middle" fill="#f78166" font-size="11">α=0.20</text>
+
+      <rect x="365" y="90" width="70" height="26" rx="4" fill="rgba(247,129,102,0.12)" stroke="#f78166" stroke-width="1"/>
+      <text x="400" y="107" text-anchor="middle" fill="#f78166" font-size="11">α=0.20</text>
+
+      <rect x="465" y="90" width="70" height="26" rx="4" fill="rgba(247,129,102,0.12)" stroke="#f78166" stroke-width="1"/>
+      <text x="500" y="107" text-anchor="middle" fill="#f78166" font-size="11">α=0.10</text>
+
+      <!-- Lines from tokens to weights -->
+      <line x1="65" y1="58" x2="65" y2="90" stroke="#8b949e" stroke-width="1" marker-end="url(#arr)"/>
+      <line x1="180" y1="58" x2="180" y2="90" stroke="#3fb950" stroke-width="2" marker-end="url(#arr-grn)"/>
+      <line x1="295" y1="58" x2="295" y2="90" stroke="#8b949e" stroke-width="1" marker-end="url(#arr)"/>
+      <line x1="400" y1="58" x2="400" y2="90" stroke="#8b949e" stroke-width="1" marker-end="url(#arr)"/>
+      <line x1="500" y1="58" x2="500" y2="90" stroke="#8b949e" stroke-width="1" marker-end="url(#arr)"/>
+
+      <!-- Lines from weights converging to sum node -->
+      <circle cx="290" cy="185" r="20" fill="#2c2c2a" stroke="#d29922" stroke-width="1.5"/>
+      <text x="290" y="182" text-anchor="middle" fill="#d29922" font-size="14">Σ</text>
+      <text x="290" y="196" text-anchor="middle" fill="#d29922" font-size="9">weighted</text>
+
+      <line x1="65"  y1="116" x2="275" y2="178" stroke="#8b949e" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr)"/>
+      <line x1="180" y1="116" x2="278" y2="170" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arr-grn)"/>
+      <line x1="295" y1="116" x2="290" y2="165" stroke="#8b949e" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr)"/>
+      <line x1="400" y1="116" x2="305" y2="175" stroke="#8b949e" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr)"/>
+      <line x1="500" y1="116" x2="308" y2="175" stroke="#8b949e" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr)"/>
+
+      <!-- Output arrow -->
+      <line x1="290" y1="205" x2="290" y2="245" stroke="#d29922" stroke-width="2" marker-end="url(#arr)"/>
+
+      <!-- Output box -->
+      <rect x="185" y="248" width="210" height="46" rx="6" fill="rgba(210,153,34,0.12)" stroke="#d29922" stroke-width="1.5"/>
+      <text x="290" y="268" text-anchor="middle" fill="#d29922" font-size="12" font-weight="bold">z² = [0.28, 0.29, 0.27]</text>
+      <text x="290" y="284" text-anchor="middle" fill="#8b949e" font-size="10">context vector for "journey"</text>
+
+      <!-- Legend -->
+      <rect x="560" y="20" width="110" height="70" rx="5" fill="#2c2c2a" stroke="#3a3a37"/>
+      <text x="615" y="35" text-anchor="middle" fill="#8b949e" font-size="9">LEGEND</text>
+      <circle cx="572" cy="50" r="4" fill="#3fb950"/>
+      <text x="580" y="54" fill="#8b949e" font-size="9">query token</text>
+      <rect x="568" y="60" width="8" height="8" rx="1" fill="rgba(247,129,102,0.3)" stroke="#f78166"/>
+      <text x="580" y="68" fill="#8b949e" font-size="9">other tokens</text>
+      <line x1="568" y1="77" x2="578" y2="77" stroke="#8b949e" stroke-dasharray="3,2" stroke-width="1"/>
+      <text x="580" y="81" fill="#8b949e" font-size="9">attention flow</text>
+    </svg>
+  </div>
+
+  <div class="sub-h">Worked Calculation</div>
+  <div class="callout blue" data-label="Step-by-step z²">
+    <div class="mb">
+      $$z^2 = 0.10\cdot[0.4,0.1,0.8] + 0.20\cdot[0.5,0.2,0.1] + 0.20\cdot[0.5,0.3,0.0] + 0.20\cdot[0.2,0.5,0.4] + 0.10\cdot[0.0,0.8,0.9]$$
+      $$= [0.04,0.01,0.08]+[0.10,0.04,0.02]+[0.10,0.06,0.00]+[0.04,0.10,0.08]+[0.00,0.08,0.09]$$
+      $$\boxed{z^2 \approx [0.28,\;0.29,\;0.27]}$$
+    </div>
+  </div>
+
+  <div class="hl warn"><strong>We compute one z per token.</strong> For T tokens → T context vectors $[z^1,\dots,z^T]$, each context-aware. As matrix: $Z = \alpha X \in \mathbb{R}^{T\times d}$.</div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Context Vector Computation (Step 3)</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="cm"># Z = alpha @ X  →  [T,T] @ [T,d] = [T,d]</span>
+<span class="kw">import</span> torch, torch.nn.functional <span class="kw">as</span> F
+
+X = torch.<span class="fn">tensor</span>([
+    [<span class="nu">0.4</span>,<span class="nu">0.1</span>,<span class="nu">0.8</span>],[<span class="nu">0.5</span>,<span class="nu">0.2</span>,<span class="nu">0.1</span>],[<span class="nu">0.5</span>,<span class="nu">0.3</span>,<span class="nu">0.0</span>],[<span class="nu">0.2</span>,<span class="nu">0.5</span>,<span class="nu">0.4</span>],[<span class="nu">0.0</span>,<span class="nu">0.8</span>,<span class="nu">0.9</span>],
+])
+
+omega = X @ X.T
+alpha = F.<span class="fn">softmax</span>(omega, dim=-<span class="nu">1</span>)
+Z     = alpha @ X  <span class="cm"># [5,5] @ [5,3] = [5,3]</span>
+
+<span class="fn">print</span>(<span class="st">"alpha:\n"</span>,  alpha.<span class="fn">round</span>(decimals=<span class="nu">2</span>))
+<span class="fn">print</span>(<span class="st">"Z:\n"</span>,     Z.<span class="fn">round</span>(decimals=<span class="nu">3</span>))
+<span class="fn">print</span>(<span class="st">"z2:"</span>,      Z[<span class="nu">1</span>])  <span class="cm"># ≈ [0.28, 0.29, 0.27]</span></pre>
+  </div>
+  <div class="hl success"><strong>Full pipeline:</strong> $X \xrightarrow{\text{dot product}} \omega \xrightarrow{\text{softmax}} \alpha \xrightarrow{\text{weighted sum}} Z$. Each row of Z is a context-enriched token representation.</div>
+
+  <div class="sub-h">Step 4: Computing Context Vectors for ALL Tokens</div>
+  <div class="hl warn">
+    <strong>Important:</strong> We computed $z^2$ for "journey" above — but we must repeat the <em>same 3 steps</em> for <em>every</em> token in the sequence. We get one context vector per token: $z^1, z^2, z^3, z^4, z^5$.
+  </div>
+  <p style="color:var(--muted);margin:.8rem 0">We can extend the same computation to calculate attention weights and context vectors for <em>all</em> input tokens efficiently. We calculate the full attention weight matrix $\Omega$ as follows:</p>
+  <div class="mb">
+    $$\Omega = X \cdot X^\top \quad \in \mathbb{R}^{T \times T}$$
+    $$\text{Row } i \text{ of } \Omega = [\omega_{i1},\ \omega_{i2},\ \dots,\ \omega_{iT}] \quad \leftarrow \text{attention scores for token } i$$
+  </div>
+  <div class="callout blue" data-label="Full ω Matrix [5×5] for our example">
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:.5rem">Each entry $\omega_{ij}$ = dot product of $x^i$ and $x^j$. Row = query token, Column = key token.</p>
+    <div class="mat-wrap">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);margin-bottom:.4rem">
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; your &nbsp; journ &nbsp; start &nbsp;&nbsp; one &nbsp;&nbsp; step
+        </div>
+        <div class="mat">
+          <div class="mat-row">
+            <div class="mat-cell hl-cell">0.30</div><div class="mat-cell">0.30</div><div class="mat-cell">0.23</div><div class="mat-cell">0.39</div><div class="mat-cell">0.81</div>
+          </div>
+          <div class="mat-row">
+            <div class="mat-cell">0.30</div><div class="mat-cell hl-cell2">0.30</div><div class="mat-cell hl-cell2">0.31</div><div class="mat-cell">0.24</div><div class="mat-cell">0.25</div>
+          </div>
+          <div class="mat-row">
+            <div class="mat-cell">0.23</div><div class="mat-cell">0.31</div><div class="mat-cell">0.34</div><div class="mat-cell">0.31</div><div class="mat-cell">0.24</div>
+          </div>
+          <div class="mat-row">
+            <div class="mat-cell">0.39</div><div class="mat-cell">0.24</div><div class="mat-cell">0.31</div><div class="mat-cell">0.45</div><div class="mat-cell">0.76</div>
+          </div>
+          <div class="mat-row">
+            <div class="mat-cell">0.81</div><div class="mat-cell">0.25</div><div class="mat-cell">0.24</div><div class="mat-cell">0.76</div><div class="mat-cell hl-cell3">1.45</div>
+          </div>
+        </div>
+        <div class="mat-label">$\Omega = X X^\top$ — rows = queries, cols = keys. Diagonal = self-score (always highest)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-h">Then: Softmax Each Row → α Matrix, Then Z = αX</div>
+  <div class="mb">
+    $$A = \text{softmax}(\Omega) \quad \in \mathbb{R}^{T \times T} \quad \text{(softmax applied row-wise)}$$
+    $$Z = A \cdot X \quad \in \mathbb{R}^{T \times d} \quad \text{(each row = one context vector)}$$
+  </div>
+  <div class="hl">
+    <strong>Result:</strong> $Z$ has the same shape as $X$ — same $T$ tokens, same $d$ dimensions. But now each row $z^i$ is <em>context-aware</em>: it encodes information about token $i$ <em>and</em> its relationships to all other tokens in the sequence. This is the fundamental power of self-attention.
+  </div>
+  <div class="hl warn">
+    <strong>Later we will add trainable weights $W_Q$, $W_K$, $W_V$</strong> that help the LLM learn to construct these context vectors so they are actually useful for generating the next token. Without training, the context vectors encode raw embedding similarity — not semantic meaning.
+  </div>
+</section>
+
+<!-- ═══ §9 Weight Matrices ═══ -->
+<section class="sec reveal" id="weight-matrix">
+  <div class="sec-tag">S9 — Weight Matrices</div>
+  <h2>Self-Attention with Trainable Weight Matrices</h2>
+  <p class="sec-intro">Real self-attention introduces three learned projection matrices $W_Q$, $W_K$, $W_V$ that transform each token into a <em>query</em>, <em>key</em>, and <em>value</em> vector — trained via backpropagation.</p>
+
+  <div class="sub-h">The Three Projections</div>
+  <div class="card-grid">
+    <div class="card amber"><div class="card-title">Query (Q)</div><p>What the current token is <em>looking for</em>. The search query — what info does this token need from others?</p></div>
+    <div class="card blue"><div class="card-title">Key (K)</div><p>What each token <em>offers</em> as an identifier. Scores = matching query against all keys.</p></div>
+    <div class="card green"><div class="card-title">Value (V)</div><p>The actual <em>content</em> that gets aggregated. Once relevance is known via Q·K, values get mixed into output.</p></div>
+  </div>
+
+  <div class="sub-h">Diagram: $W_Q$, $W_K$, $W_V$ Projections</div>
+
+  <!-- SVG DIAGRAM: trainable weight projections -->
+  <div class="tw-diagram">
+    <svg width="680" height="310" viewBox="0 0 680 310" xmlns="http://www.w3.org/2000/svg"
+         font-family="JetBrains Mono, monospace" font-size="11">
+      <defs>
+        <marker id="arw" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#8b949e"/>
+        </marker>
+        <marker id="arw-a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#f78166"/>
+        </marker>
+        <marker id="arw-b" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#58a6ff"/>
+        </marker>
+        <marker id="arw-g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#3fb950"/>
+        </marker>
+      </defs>
+
+      <!-- Input embeddings (left column) -->
+      <text x="10" y="18" fill="#8b949e" font-size="10">INPUT X</text>
+      <rect x="10" y="25" width="88" height="28" rx="4" fill="#1f1f1e" stroke="#58a6ff" stroke-width="1.2"/>
+      <text x="54" y="37" text-anchor="middle" fill="#58a6ff" font-size="10">x¹ "your"</text>
+      <text x="54" y="49" text-anchor="middle" fill="#8b949e" font-size="9">3-dim</text>
+
+      <rect x="10" y="68" width="88" height="28" rx="4" fill="#1f1f1e" stroke="#3fb950" stroke-width="1.8"/>
+      <text x="54" y="80" text-anchor="middle" fill="#3fb950" font-size="10">x² "journey"</text>
+      <text x="54" y="92" text-anchor="middle" fill="#8b949e" font-size="9">3-dim</text>
+
+      <rect x="10" y="110" width="88" height="28" rx="4" fill="#1f1f1e" stroke="#58a6ff" stroke-width="1.2"/>
+      <text x="54" y="122" text-anchor="middle" fill="#58a6ff" font-size="10">x³ "starts"</text>
+      <text x="54" y="134" text-anchor="middle" fill="#8b949e" font-size="9">3-dim</text>
+
+      <text x="30" y="160" fill="#8b949e" font-size="10">…  xᵀ "step"</text>
+
+      <!-- Weight matrices (center) -->
+      <!-- W_Q -->
+      <rect x="170" y="20" width="70" height="55" rx="5" fill="rgba(210,153,34,0.1)" stroke="#d29922" stroke-width="1.5"/>
+      <text x="205" y="42" text-anchor="middle" fill="#d29922" font-size="13" font-weight="bold">W_Q</text>
+      <text x="205" y="56" text-anchor="middle" fill="#8b949e" font-size="9">[d × d<tspan baseline-shift="sub" font-size="7">k</tspan>]</text>
+      <text x="205" y="70" text-anchor="middle" fill="#8b949e" font-size="9">trainable</text>
+
+      <!-- W_K -->
+      <rect x="170" y="105" width="70" height="55" rx="5" fill="rgba(88,166,255,0.1)" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="205" y="127" text-anchor="middle" fill="#58a6ff" font-size="13" font-weight="bold">W_K</text>
+      <text x="205" y="141" text-anchor="middle" fill="#8b949e" font-size="9">[d × d<tspan baseline-shift="sub" font-size="7">k</tspan>]</text>
+      <text x="205" y="155" text-anchor="middle" fill="#8b949e" font-size="9">trainable</text>
+
+      <!-- W_V -->
+      <rect x="170" y="190" width="70" height="55" rx="5" fill="rgba(63,185,80,0.1)" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="205" y="212" text-anchor="middle" fill="#3fb950" font-size="13" font-weight="bold">W_V</text>
+      <text x="205" y="226" text-anchor="middle" fill="#8b949e" font-size="9">[d × d<tspan baseline-shift="sub" font-size="7">v</tspan>]</text>
+      <text x="205" y="240" text-anchor="middle" fill="#8b949e" font-size="9">trainable</text>
+
+      <!-- Lines: X -> W matrices -->
+      <line x1="98"  y1="82"  x2="170" y2="55"  stroke="#d29922" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arw-a)"/>
+      <line x1="98"  y1="82"  x2="170" y2="132" stroke="#58a6ff" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arw-b)"/>
+      <line x1="98"  y1="82"  x2="170" y2="218" stroke="#3fb950" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arw-g)"/>
+
+      <!-- Q, K, V output boxes -->
+      <rect x="310" y="20" width="70" height="55" rx="5" fill="rgba(210,153,34,0.12)" stroke="#d29922" stroke-width="1.5"/>
+      <text x="345" y="42" text-anchor="middle" fill="#d29922" font-size="14" font-weight="bold">Q</text>
+      <text x="345" y="55" text-anchor="middle" fill="#8b949e" font-size="9">[T × d<tspan baseline-shift="sub" font-size="7">k</tspan>]</text>
+      <text x="345" y="69" text-anchor="middle" fill="#d29922" font-size="9">queries</text>
+
+      <rect x="310" y="105" width="70" height="55" rx="5" fill="rgba(88,166,255,0.12)" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="345" y="127" text-anchor="middle" fill="#58a6ff" font-size="14" font-weight="bold">K</text>
+      <text x="345" y="140" text-anchor="middle" fill="#8b949e" font-size="9">[T × d<tspan baseline-shift="sub" font-size="7">k</tspan>]</text>
+      <text x="345" y="154" text-anchor="middle" fill="#58a6ff" font-size="9">keys</text>
+
+      <rect x="310" y="190" width="70" height="55" rx="5" fill="rgba(63,185,80,0.12)" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="345" y="212" text-anchor="middle" fill="#3fb950" font-size="14" font-weight="bold">V</text>
+      <text x="345" y="225" text-anchor="middle" fill="#8b949e" font-size="9">[T × d<tspan baseline-shift="sub" font-size="7">v</tspan>]</text>
+      <text x="345" y="239" text-anchor="middle" fill="#3fb950" font-size="9">values</text>
+
+      <!-- Lines: W -> Q,K,V -->
+      <line x1="240" y1="47"  x2="310" y2="47"  stroke="#d29922" stroke-width="1.5" marker-end="url(#arw-a)"/>
+      <line x1="240" y1="132" x2="310" y2="132" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arw-b)"/>
+      <line x1="240" y1="217" x2="310" y2="217" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arw-g)"/>
+
+      <!-- Score computation: Q * K^T / sqrt(dk) -->
+      <rect x="440" y="42" width="100" height="40" rx="5" fill="#2c2c2a" stroke="#d29922" stroke-width="1.2"/>
+      <text x="490" y="58" text-anchor="middle" fill="#d29922" font-size="10">QK<tspan baseline-shift="super" font-size="7">⊤</tspan> / √d<tspan baseline-shift="sub" font-size="7">k</tspan></text>
+      <text x="490" y="73" text-anchor="middle" fill="#8b949e" font-size="9">scores [T×T]</text>
+
+      <!-- Softmax -->
+      <rect x="440" y="103" width="100" height="40" rx="5" fill="#2c2c2a" stroke="#58a6ff" stroke-width="1.2"/>
+      <text x="490" y="119" text-anchor="middle" fill="#58a6ff" font-size="10">softmax</text>
+      <text x="490" y="132" text-anchor="middle" fill="#8b949e" font-size="9">weights α [T×T]</text>
+
+      <!-- Output Z -->
+      <rect x="440" y="190" width="100" height="40" rx="5" fill="rgba(247,129,102,0.12)" stroke="#f78166" stroke-width="1.5"/>
+      <text x="490" y="207" text-anchor="middle" fill="#f78166" font-size="11" font-weight="bold">Z = α · V</text>
+      <text x="490" y="219" text-anchor="middle" fill="#8b949e" font-size="9">output [T×d<tspan baseline-shift="sub" font-size="7">v</tspan>]</text>
+
+      <!-- Lines connecting right side -->
+      <line x1="380" y1="47"  x2="440" y2="62"  stroke="#d29922" stroke-width="1.2" marker-end="url(#arw-a)"/>
+      <line x1="380" y1="132" x2="440" y2="62"  stroke="#58a6ff" stroke-width="1.2" marker-end="url(#arw-b)"/>
+      <line x1="490" y1="82"  x2="490" y2="103" stroke="#8b949e" stroke-width="1.2" marker-end="url(#arw)"/>
+      <line x1="380" y1="217" x2="440" y2="210" stroke="#3fb950" stroke-width="1.2" marker-end="url(#arw-g)"/>
+      <line x1="490" y1="143" x2="490" y2="190" stroke="#8b949e" stroke-width="1.2" stroke-dasharray="3,2" marker-end="url(#arw)"/>
+
+      <!-- Labels below -->
+      <text x="344" y="275" text-anchor="middle" fill="#8b949e" font-size="9">← updated by backprop during training →</text>
+      <line x1="170" y1="268" x2="310" y2="268" stroke="#3a3a37" stroke-width="1" marker-end="url(#arw)"/>
+      <line x1="310" y1="268" x2="170" y2="268" stroke="#3a3a37" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="sub-h">The Full Formula</div>
+  <div class="mb">
+    $$Q = XW_Q,\quad K = XW_K,\quad V = XW_V$$
+    $$\text{Attention}(Q,K,V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V$$
+  </div>
+
+  <div class="callout amber" data-label="Scaling Factor √dₖ">
+    <p style="color:var(--muted)">Without scaling, large $d_k$ → large dot products → softmax gets peaked (near one-hot) → vanishing gradients. Dividing by $\sqrt{d_k}$ keeps variance stable. If $d_k=64$ then scale = 8.</p>
+  </div>
+
+  <div class="sub-h">Simplified SA vs Full SA</div>
+  <table>
+    <tr><th>Aspect</th><th>Simplified SA</th><th>Full SA ($W_Q$, $W_K$, $W_V$)</th></tr>
+    <tr><td class="val">Q / K / V</td><td>Same as X</td><td class="green">Learned projections of X</td></tr>
+    <tr><td class="val">Trainable params</td><td class="acc">None</td><td class="green">3 weight matrices per head</td></tr>
+    <tr><td class="val">Scaling</td><td class="acc">No</td><td class="green">$\div \sqrt{d_k}$</td></tr>
+    <tr><td class="val">Used in</td><td>Teaching only</td><td class="green">GPT, BERT, LLaMA, all LLMs</td></tr>
+  </table>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Self-Attention with W_Q, W_K, W_V</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch, torch.nn <span class="kw">as</span> nn, torch.nn.functional <span class="kw">as</span> F, math
+
+<span class="kw">class</span> <span class="cl">SelfAttention</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="id2">self</span>, d_model, d_k, d_v):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="id2">self</span>.W_Q = nn.<span class="cl">Linear</span>(d_model, d_k, bias=<span class="kw">False</span>)
+        <span class="id2">self</span>.W_K = nn.<span class="cl">Linear</span>(d_model, d_k, bias=<span class="kw">False</span>)
+        <span class="id2">self</span>.W_V = nn.<span class="cl">Linear</span>(d_model, d_v, bias=<span class="kw">False</span>)
+        <span class="id2">self</span>.scale = math.<span class="fn">sqrt</span>(d_k)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="id2">self</span>, X):
+        Q = <span class="id2">self</span>.<span class="fn">W_Q</span>(X)  <span class="cm"># [T, d_k]</span>
+        K = <span class="id2">self</span>.<span class="fn">W_K</span>(X)  <span class="cm"># [T, d_k]</span>
+        V = <span class="id2">self</span>.<span class="fn">W_V</span>(X)  <span class="cm"># [T, d_v]</span>
+        scores = (Q @ K.<span class="fn">T</span>) / <span class="id2">self</span>.scale  <span class="cm"># scaled dot product</span>
+        alpha  = F.<span class="fn">softmax</span>(scores, dim=-<span class="nu">1</span>)
+        Z      = alpha @ V
+        <span class="kw">return</span> Z, alpha
+
+<span class="cm"># Arjun's example: 5 tokens, d_model=8 → d_k=d_v=4</span>
+attn = <span class="cl">SelfAttention</span>(d_model=<span class="nu">8</span>, d_k=<span class="nu">4</span>, d_v=<span class="nu">4</span>)
+X = torch.<span class="fn">randn</span>(<span class="nu">5</span>, <span class="nu">8</span>)
+Z, alpha = attn.<span class="fn">forward</span>(X)
+<span class="fn">print</span>(<span class="st">"Z:"</span>, Z.shape, <span class="st">"alpha row sums:"</span>, alpha.<span class="fn">sum</span>(dim=-<span class="nu">1</span>))</pre>
+  </div>
+  <div class="hl success"><strong>$W_Q$, $W_K$, $W_V$ are the learned parameters.</strong> Updated via backpropagation during training — this is how the model learns to compute useful attention patterns.</div>
+</section>
+
+<!-- ═══ §10 Summary ═══ -->
+<section class="sec reveal" id="summary">
+  <div class="sec-tag">S10 — Summary</div>
+  <h2>Summary — Attention Mechanism End-to-End</h2>
+  <p class="sec-intro">Everything in one place. From the RNN bottleneck to the full Transformer self-attention formula.</p>
+
+  <div class="sub-h">The Full Evolution Pipeline</div>
+  <div class="pipeline">
+    <div class="pipe-box amber">RNN bottleneck</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">Bahdanau (2014)</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box accent">Self-Attention</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box green">$W_Q$, $W_K$, $W_V$</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box">Multi-Head</div>
+  </div>
+
+  <div class="sub-h">Simple Self-Attention: 3 Steps</div>
+  <div class="card-grid">
+    <div class="card amber"><div class="card-title">Step 1 — Scores ω</div><p>$\omega_{ij}=x^i\cdot x^j$ — dot product. Measures raw similarity. Output: [T×T].</p></div>
+    <div class="card blue"><div class="card-title">Step 2 — Weights α</div><p>$\alpha=\text{softmax}(\omega)$ — probabilities. Each row sums to 1. Output: [T×T].</p></div>
+    <div class="card green"><div class="card-title">Step 3 — Context Z</div><p>$Z=\alpha X$ — weighted sum. Each $z^i$ encodes full sequence context. Output: [T×d].</p></div>
+  </div>
+
+  <div class="sub-h">Full Self-Attention Formula</div>
+  <div class="mb">
+    $$\text{Attention}(Q,K,V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V$$
+    $$Q=XW_Q,\quad K=XW_K,\quad V=XW_V$$
+  </div>
+
+  <div class="sub-h">Concept Cheat Sheet</div>
+  <table>
+    <tr><th>Term</th><th>What It Is</th><th>Shape</th></tr>
+    <tr><td class="val">$x^i$</td><td>Token embedding for token i</td><td class="blue">$[d]$</td></tr>
+    <tr><td class="val">$\omega_{ij}$</td><td>Raw attention score (dot product)</td><td class="blue">scalar</td></tr>
+    <tr><td class="val">$\alpha_{ij}$</td><td>Attention weight (post-softmax)</td><td class="blue">$\in [0,1]$</td></tr>
+    <tr><td class="val">$z^i$</td><td>Context vector for token i</td><td class="blue">$[d_v]$</td></tr>
+    <tr><td class="val">$W_Q, W_K$</td><td>Query/Key projection matrices</td><td class="blue">$[d \times d_k]$</td></tr>
+    <tr><td class="val">$W_V$</td><td>Value projection matrix</td><td class="blue">$[d \times d_v]$</td></tr>
+    <tr><td class="val">$\sqrt{d_k}$</td><td>Scaling factor (variance control)</td><td class="blue">scalar</td></tr>
+  </table>
+
+  <div class="sub-h">RNN vs Attention</div>
+  <div class="card-grid">
+    <div class="card red"><div class="card-title">RNN: Fixed Context</div><p>Compresses entire sequence into one vector. Long-range info lost. Sequential — no parallelism.</p></div>
+    <div class="card green"><div class="card-title">Attention: Dynamic Context</div><p>Direct access to all positions simultaneously. No bottleneck. Fully parallelizable — O(1) depth.</p></div>
+  </div>
+
+  <div class="sub-h">What's Next</div>
+  <div class="pipeline">
+    <div class="pipe-box accent">Self-Attention ✓</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">Multi-Head Attention</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">Causal (Masked) Attention</div><div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Full Transformer Block</div>
+  </div>
+
+  <div class="callout green" data-label="Key Paper">
+    <p style="color:var(--muted)">Vaswani et al. (2017) — <strong style="color:var(--accent4)">"Attention Is All You Need"</strong>. No RNNs, no convolutions — pure self-attention + feedforward. Foundation of GPT, BERT, T5, LLaMA, and every modern LLM.</p>
+  </div>
+</section>
+
+<script>
+// ── Sidebar toggle ───
+let sidebarOpen = true;
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  document.getElementById('sidebar').classList.toggle('open', sidebarOpen);
+  document.body.classList.toggle('sidebar-open', sidebarOpen);
+  document.getElementById('sb-btn').innerHTML = sidebarOpen ? '&#8249;&#8249;' : '&#8250;&#8250;';
+}
+
+
+// ── Reveal on scroll ───
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('show'); });
+}, { threshold: 0.06 });
+reveals.forEach(r => observer.observe(r));
+
+// ── Active nav + sidebar ───
+const sections = document.querySelectorAll('section[id]');
+const topLinks = document.querySelectorAll('.nav-scrolllinks a');
+const sbLinks  = document.querySelectorAll('.sb-link');
+
+const navObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      topLinks.forEach(a => a.classList.remove('active'));
+      sbLinks.forEach(a => a.classList.remove('active'));
+      const href = `#${e.target.id}`;
+      const tl = document.querySelector(`.nav-scrolllinks a[href="${href}"]`);
+      const sl = document.querySelector(`.sb-link[href="${href}"]`);
+      if (tl) tl.classList.add('active');
+      if (sl) sl.classList.add('active');
+    }
+  });
+}, { threshold: 0.25 });
+sections.forEach(s => navObserver.observe(s));
+
+// ── Step navigator ───
+const stepState = {};
+function stepNav(id, min, max, dir) {
+  if (stepState[id] === undefined) stepState[id] = min;
+  document.getElementById(`${id}-${stepState[id]}`).classList.remove('on');
+  stepState[id] = Math.min(max, Math.max(min, stepState[id] + dir));
+  document.getElementById(`${id}-${stepState[id]}`).classList.add('on');
+  document.getElementById(`${id}-idx`).textContent = `Step ${stepState[id]} of ${max}`;
+}
+
+// ── Copy code ───
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 1800);
+  });
+}
+
+// ── KaTeX ───
+document.addEventListener('DOMContentLoaded', () => {
+  renderMathInElement(document.body, {
+    delimiters:[
+      {left:'$$',right:'$$',display:true},
+      {left:'$',right:'$',display:false}
+    ],
+    throwOnError:false
+  });
+});
+</script>
+</body>
+</html>
