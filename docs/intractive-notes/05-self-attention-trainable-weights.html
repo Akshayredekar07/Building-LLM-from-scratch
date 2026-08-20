@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Self-Attention with Trainable Weights</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,700;1,400&family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+:root{
+  --bg:#1f1f1e;--bg2:#2c2c2a;--bg3:#121212;
+  --text:#e6edf3;--muted:#8b949e;
+  --accent:#f78166;--accent2:#d29922;--accent3:#58a6ff;--accent4:#3fb950;
+  --border:#3a3a37;--sidebar-w:240px;
+  --grad-accent:linear-gradient(135deg,#f78166 0%,#d29922 100%);
+  --card-glow:0 0 0 1px #3a3a37,0 4px 24px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.97rem;line-height:1.75;padding-top:51px}
+body.sidebar-open{padding-left:var(--sidebar-w)}
+a{color:var(--accent3);text-decoration:none}
+
+/* NAV */
+nav.topnav{position:fixed;top:0;left:0;right:0;height:51px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.2rem;gap:1rem;z-index:8000}
+.nav-brand{font-family:'Playfair Display',serif;font-size:1rem;color:#fff;letter-spacing:.01em;white-space:nowrap;font-weight:700}
+.nav-toggle{background:none;border:1px solid var(--border);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:.8rem;padding:.2rem .55rem;border-radius:5px;cursor:pointer;transition:all .2s}
+.nav-scrolllinks{display:flex;gap:1rem;overflow-x:auto;flex:1;scrollbar-width:none}
+.nav-scrolllinks a{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted);transition:color .2s;white-space:nowrap}
+.nav-scrolllinks a.active,.nav-scrolllinks a:hover{color:var(--accent3)}
+
+/* SIDEBAR */
+#sidebar{position:fixed;top:51px;left:0;bottom:0;width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);z-index:7000;overflow-y:auto;transform:translateX(-100%);transition:transform .3s;padding-bottom:2rem}
+#sidebar.open{transform:translateX(0)}
+.sb-title{font-family:'Playfair Display',serif;font-size:.9rem;color:#fff;padding:1rem 1rem .5rem;border-bottom:1px solid var(--border);margin-bottom:.5rem}
+.sb-link{display:flex;align-items:center;gap:.6rem;padding:.55rem 1rem;font-family:'DM Sans',sans-serif;font-size:.82rem;color:var(--muted);border-left:3px solid transparent;text-decoration:none}
+.sb-link.active{color:var(--accent);background:rgba(247,129,102,.08);border-left-color:var(--accent)}
+.sb-num{font-family:'JetBrains Mono',monospace;font-size:.65rem;background:var(--muted);color:#1f1f1e;border-radius:3px;padding:1px 5px;min-width:18px;text-align:center}
+.sb-link.active .sb-num{background:var(--accent)}
+
+/* HERO */
+.hero{background:var(--bg);border-bottom:1px solid var(--border);padding:3.5rem 2rem 2.5rem;text-align:center}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,3rem);color:#fff;letter-spacing:.01em;font-weight:700}
+.hero p{font-family:'Playfair Display',serif;font-style:italic;color:var(--muted);margin-top:.5rem;font-size:.92rem}
+.hero-tags{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin-top:1.2rem}
+
+/* TAGS */
+.tag{font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:.2rem .6rem;border-radius:4px;background:rgba(88,166,255,.12);color:var(--accent3);border:1px solid rgba(88,166,255,.25)}
+.tag.red{background:rgba(247,129,102,.12);color:var(--accent);border-color:rgba(247,129,102,.25)}
+.tag.green{background:rgba(63,185,80,.12);color:var(--accent4);border-color:rgba(63,185,80,.25)}
+.tag.amber{background:rgba(210,153,34,.12);color:var(--accent2);border-color:rgba(210,153,34,.25)}
+
+/* SECTION */
+.sec{max-width:900px;margin:0 auto;padding:3rem 1.5rem 2.5rem;border-bottom:1px solid var(--border)}
+.sec-tag{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.6rem}
+.sec h2{font-family:'Playfair Display',serif;font-size:1.45rem;letter-spacing:.01em;color:var(--text);margin-bottom:.8rem;font-weight:700}
+.sec-intro{color:var(--muted);margin-bottom:1.8rem;font-size:.97rem;line-height:1.75}
+
+/* SUB-HEADING */
+.sub-h{font-family:'DM Sans',sans-serif;font-style:normal;font-size:1rem;font-weight:600;color:var(--accent3);margin:2rem 0 .8rem;padding-bottom:.3rem;border-bottom:1px solid var(--border)}
+
+/* CARDS */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin:1rem 0}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem 1.1rem;box-shadow:var(--card-glow)}
+.card-title{font-family:'JetBrains Mono',monospace;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem}
+.card.amber .card-title{color:var(--accent2)}
+.card.blue .card-title{color:var(--accent3)}
+.card.green .card-title{color:var(--accent4)}
+.card.red .card-title{color:var(--accent)}
+.card p{color:var(--muted);font-size:.88rem;line-height:1.6}
+
+/* HIGHLIGHT BOXES */
+.hl{background:rgba(88,166,255,.07);border:1px solid rgba(88,166,255,.25);border-radius:6px;padding:.9rem 1.1rem;margin:1rem 0;font-size:.92rem}
+.hl strong{color:var(--accent3)}
+.hl.warn{background:rgba(210,153,34,.07);border:1px solid rgba(210,153,34,.25)}
+.hl.warn strong{color:var(--accent2)}
+.hl.success{background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.25)}
+.hl.success strong{color:var(--accent4)}
+.hl.red{background:rgba(247,129,102,.07);border:1px solid rgba(247,129,102,.25)}
+.hl.red strong{color:var(--accent)}
+
+/* CALLOUT */
+.callout{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;margin:1rem 0;position:relative}
+.callout::before{content:attr(data-label);font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);position:absolute;top:-.55rem;left:1rem;background:var(--bg2);padding:0 .4rem}
+.callout.blue::before{color:var(--accent3)}
+.callout.green::before{color:var(--accent4)}
+.callout.amber::before{color:var(--accent2)}
+.callout p{color:var(--muted);font-size:.9rem;margin:.3rem 0}
+
+/* PIPELINE */
+.pipeline{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1rem 0;padding:1rem;background:var(--bg2);border:1px solid var(--border);border-radius:8px}
+.pipe-box{font-family:'JetBrains Mono',monospace;font-size:.75rem;padding:.4rem .85rem;border-radius:5px;background:var(--bg3);border:1px solid var(--border);color:var(--text);text-align:center}
+.pipe-box.accent{border-color:var(--accent);color:var(--accent)}
+.pipe-box.blue{border-color:var(--accent3);color:var(--accent3)}
+.pipe-box.green{border-color:var(--accent4);color:var(--accent4)}
+.pipe-box.amber{border-color:var(--accent2);color:var(--accent2)}
+.pipe-arrow{color:var(--muted);font-size:1.1rem}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.88rem}
+th{background:var(--bg2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;padding:.6rem .9rem;border:1px solid var(--border);text-align:left}
+td{background:var(--bg3);color:var(--muted);padding:.55rem .9rem;border:1px solid var(--border)}
+td.val{color:var(--accent)}td.blue{color:var(--accent3)}td.green{color:var(--accent4)}td.amber{color:var(--accent2)}td.acc{color:var(--accent)}
+
+/* MATH BLOCK */
+.mb{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem 1.4rem;margin:1rem 0;overflow-x:auto}
+
+/* CODE */
+.code-block{background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin:1rem 0;overflow:hidden}
+.code-header{display:flex;justify-content:space-between;align-items:center;padding:.5rem 1rem;border-bottom:1px solid var(--border);background:var(--bg2)}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em}
+.code-copy{background:none;border:1px solid var(--border);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.7rem;padding:.2rem .5rem;border-radius:4px;cursor:pointer;transition:color .2s}
+.code-copy:hover{color:var(--accent3)}
+pre{padding:1.1rem 1.2rem;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.7;color:var(--text)}
+.kw{color:#f47067}.fn{color:#dcbdfb}.st{color:#96d0ff}.cm{color:#636e7b;font-style:italic}.nu{color:#6cb6ff}.cl{color:#f69d50}.id2{color:#57ab5a}
+
+/* MATRIX */
+.mat-wrap{display:flex;flex-wrap:wrap;gap:1.5rem;align-items:flex-start;margin:1rem 0}
+.mat{display:inline-flex;flex-direction:column;gap:2px}
+.mat-row{display:flex;gap:2px}
+.mat-cell{background:var(--bg3);border:1px solid var(--border);padding:.35rem .6rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--text);min-width:52px;text-align:center;border-radius:3px}
+.mat-cell.hl-cell{background:rgba(88,166,255,.15);border-color:var(--accent3);color:var(--accent3)}
+.mat-cell.hl-cell2{background:rgba(63,185,80,.15);border-color:var(--accent4);color:var(--accent4)}
+.mat-cell.hl-cell3{background:rgba(247,129,102,.15);border-color:var(--accent);color:var(--accent)}
+.mat-cell.hl-cell4{background:rgba(210,153,34,.15);border-color:var(--accent2);color:var(--accent2)}
+.mat-label{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);margin-top:.5rem;text-align:center}
+
+/* ATTENTION ROW */
+.attn-row{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin:.5rem 0}
+.attn-label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);min-width:70px}
+.attn-cell{background:var(--bg3);border:1px solid var(--border);padding:.3rem .6rem;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--text);border-radius:3px;text-align:center}
+.attn-cell.score{background:rgba(88,166,255,.15);border-color:var(--accent3);color:var(--accent3)}
+.attn-cell.q{background:rgba(210,153,34,.15);border-color:var(--accent2);color:var(--accent2)}
+.attn-cell.weight{background:rgba(63,185,80,.15);border-color:var(--accent4);color:var(--accent4)}
+.attn-cell.ctx{background:rgba(247,129,102,.15);border-color:var(--accent);color:var(--accent)}
+
+/* STEP NAVIGATOR */
+.step{display:none}.step.on{display:block}
+.step-ctrl{display:flex;align-items:center;gap:1rem;margin-top:1rem}
+.step-idx{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--muted)}
+.btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.75rem;padding:.35rem .8rem;border-radius:5px;cursor:pointer;transition:all .2s}
+.btn:hover{border-color:var(--accent3);color:var(--accent3)}
+
+/* TOKEN VIS */
+.tok-vis{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin:.8rem 0}
+.tok-label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);min-width:60px}
+.tok-box{padding:.3rem .65rem;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:.78rem;border:1px solid var(--border);background:var(--bg3);color:var(--text)}
+.tok-box.input{background:rgba(88,166,255,.12);border-color:var(--accent3);color:var(--accent3)}
+.tok-box.target{background:rgba(247,129,102,.12);border-color:var(--accent);color:var(--accent)}
+.tok-box.id{background:rgba(210,153,34,.12);border-color:var(--accent2);color:var(--accent2)}
+.tok-box.emb{background:rgba(63,185,80,.12);border-color:var(--accent4);color:var(--accent4)}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .55s,transform .55s}
+.reveal.show{opacity:1;transform:none}
+
+/* PROGRESS BAR */
+#progress{position:fixed;top:51px;left:0;height:3px;background:var(--accent);z-index:9000;transition:width .1s}
+
+/* DIAGRAM SVG */
+.svg-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin:1rem 0;overflow-x:auto}
+.svg-wrap svg{max-width:100%;display:block;margin:0 auto}
+</style>
+</head>
+<body class="sidebar-open">
+<div id="progress"></div>
+
+<nav class="topnav">
+  <div class="nav-brand">Self-Attention — Deep Learning Notes</div>
+  <button class="nav-toggle" onclick="toggleSidebar()" id="sb-btn">&#8249;&#8249;</button>
+  <div class="nav-scrolllinks">
+    <a href="#overview">Overview</a>
+    <a href="#trainable-weights">Trainable Weights</a>
+    <a href="#qkv-projections">Q K V Projections</a>
+    <a href="#attention-scores">Attention Scores</a>
+    <a href="#softmax-scaling">Softmax &amp; Scaling</a>
+    <a href="#context-vectors">Context Vectors</a>
+    <a href="#implementation">Implementation</a>
+    <a href="#summary">Summary</a>
+  </div>
+</nav>
+
+<div id="sidebar" class="open">
+  <div class="sb-title">Self-Attention Notes</div>
+  <a class="sb-link" href="#overview"><span class="sb-num">S1</span>Overview</a>
+  <a class="sb-link" href="#trainable-weights"><span class="sb-num">S2</span>Trainable Weights</a>
+  <a class="sb-link" href="#qkv-projections"><span class="sb-num">S3</span>Q K V Projections</a>
+  <a class="sb-link" href="#attention-scores"><span class="sb-num">S4</span>Attention Scores</a>
+  <a class="sb-link" href="#softmax-scaling"><span class="sb-num">S5</span>Softmax &amp; Scaling</a>
+  <a class="sb-link" href="#context-vectors"><span class="sb-num">S6</span>Context Vectors</a>
+  <a class="sb-link" href="#implementation"><span class="sb-num">S7</span>Implementation</a>
+  <a class="sb-link" href="#summary"><span class="sb-num">S8</span>Summary</a>
+</div>
+
+<div class="hero">
+  <h1>Self-Attention with Trainable Weights</h1>
+  <p>How transformers learn to attend — Q, K, V projections, scaled dot-product attention, and context vectors</p>
+  <div class="hero-tags">
+    <span class="tag red">Self-Attention</span>
+    <span class="tag">Scaled Dot-Product</span>
+    <span class="tag amber">W_Q W_K W_V</span>
+    <span class="tag green">Context Vectors</span>
+    <span class="tag">GPT / BERT</span>
+    <span class="tag red">Softmax</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     S1 — OVERVIEW
+════════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="overview">
+  <div class="sec-tag">S1 — Overview</div>
+  <h2>Self-Attention with Trainable Weights</h2>
+  <p class="sec-intro">
+    In this section we learn about the <strong>self-attention mechanism with trainable weights</strong> — the core attention mechanism used in the original Transformer architecture and most modern LLMs including GPT. We previously implemented a <em>simplified self-attention</em> using a scaled dot-product approach (also called the basic form). Now we extend it with three trainable projection matrices that give the model the power to learn <em>what to attend to</em> during training.
+  </p>
+
+  <div class="sub-h">The Big Picture — Building an LLM</div>
+  <p style="color:var(--muted);margin-bottom:1rem">These notes fit into a larger pipeline. The building blocks flow in this order:</p>
+  <div class="pipeline">
+    <div class="pipe-box accent">Data Preparation &amp; Sampling</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">Attention Mechanism</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">LLM Architecture</div>
+  </div>
+  <p style="color:var(--muted);margin-top:.8rem">Within Attention, we have four progressive versions:</p>
+  <div class="pipeline" style="margin-top:.5rem">
+    <div class="pipe-box">① Simplified Self-Attn</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">② Self-Attn (this!)</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">③ Causal Attention</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">④ Multi-Head Attention</div>
+  </div>
+
+  <div class="sub-h">What We Want to Compute</div>
+  <p style="color:var(--muted);margin-bottom:.8rem">For each input token, self-attention computes a <strong>context vector</strong> — a weighted sum of all input token embeddings, where the weights tell us how much each token should "attend" to every other token.</p>
+
+  <div class="callout blue" data-label="Goal">
+    <p>Compute a <strong>context vector</strong> $z^i$ for each token $x^i$ as a <em>weighted sum</em> of input token embeddings, where the weights are <strong>token-specific</strong> and learned via trainable projection matrices.</p>
+  </div>
+
+  <div class="mb">
+    $$z^i = \sum_{j=1}^{T} \alpha_{ij} \cdot x^j$$
+  </div>
+
+  <p style="color:var(--muted)">where $\alpha_{ij}$ is the <strong>attention weight</strong> — how much token $i$ should attend to token $j$ — and $T$ is the total number of input tokens.</p>
+
+  <div class="sub-h">Why This Is More Powerful Than Simplified Self-Attention</div>
+  <div class="card-grid">
+    <div class="card amber">
+      <div class="card-title">Simplified SA (Before)</div>
+      <p>Uses the raw input embeddings $x^i$ directly to compute dot products. No learnable parameters — can't adapt during training.</p>
+    </div>
+    <div class="card blue">
+      <div class="card-title">Trainable SA (Now)</div>
+      <p>Projects inputs into three separate spaces (query, key, value) using learnable weight matrices $W_Q$, $W_K$, $W_V$ that are updated via gradient descent.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">What This Enables</div>
+      <p>The model learns <em>which semantic relationships matter</em> from the data. The same token can play different roles depending on context.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Running Example Throughout These Notes</div>
+  <div class="tok-vis">
+    <span class="tok-label">Sentence:</span>
+    <div class="tok-box input">your</div>
+    <div class="tok-box input">journey</div>
+    <div class="tok-box input">starts</div>
+    <div class="tok-box input">one</div>
+    <div class="tok-box input">step</div>
+  </div>
+  <div class="tok-vis">
+    <span class="tok-label">Tokens:</span>
+    <div class="tok-box id">x¹</div>
+    <div class="tok-box id">x²</div>
+    <div class="tok-box id">x³</div>
+    <div class="tok-box id">x⁴</div>
+    <div class="tok-box id">x⁵</div>
+  </div>
+  <p style="color:var(--muted);margin-top:.8rem">Input dimension $d = 3$. Each token is a 3-dimensional embedding. We use $d_k = d_v = 2$ for the output Q/K/V dimension. This gives us weight matrices $W_Q, W_K, W_V \in \mathbb{R}^{3 \times 2}$.</p>
+
+  <div class="hl success"><strong>Key Insight:</strong> The trainable weight matrices $W_Q$, $W_K$, $W_V$ are the <strong>only new addition</strong> over simplified self-attention. Everything else — dot products, softmax, weighted sum — remains the same.</div>
+
+  <div class="sub-h">PyTorch: The Core Idea</div>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Self-attention motivation</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch
+
+<span class="cm"># concept: simplified vs trainable self-attention</span>
+<span class="cm"># In simplified SA: Q = K = V = X (raw embeddings)</span>
+<span class="cm"># In trainable SA: Q = X @ Wq, K = X @ Wk, V = X @ Wv</span>
+
+T, d = <span class="nu">6</span>, <span class="nu">3</span>   <span class="cm"># T=6 tokens, d=3 embedding dim</span>
+d_k = <span class="nu">2</span>       <span class="cm"># output dim for Q, K, V</span>
+
+X = torch.<span class="fn">randn</span>(T, d)   <span class="cm"># [6, 3] — input token embeddings</span>
+
+<span class="cm"># Simplified: no projection, uses raw embeddings</span>
+omega_simple = X @ X.<span class="fn">T</span>   <span class="cm"># [6, 6] — attention scores (raw)</span>
+
+<span class="cm"># Trainable: project into Q/K/V spaces first</span>
+Wq = torch.<span class="fn">randn</span>(d, d_k)  <span class="cm"># [3, 2] — query weight matrix</span>
+Wk = torch.<span class="fn">randn</span>(d, d_k)  <span class="cm"># [3, 2] — key weight matrix</span>
+Wv = torch.<span class="fn">randn</span>(d, d_k)  <span class="cm"># [3, 2] — value weight matrix</span>
+
+Q = X @ Wq   <span class="cm"># [6, 2] — query matrix</span>
+K = X @ Wk   <span class="cm"># [6, 2] — key matrix</span>
+V = X @ Wv   <span class="cm"># [6, 2] — value matrix</span>
+
+omega_trained = Q @ K.<span class="fn">T</span>   <span class="cm"># [6, 6] — richer attention scores</span>
+<span class="fn">print</span>(<span class="st">"Q shape:"</span>, Q.shape)   <span class="cm"># torch.Size([6, 2])</span>
+<span class="fn">print</span>(<span class="st">"Attention scores shape:"</span>, omega_trained.shape)   <span class="cm"># [6, 6]</span>
+</pre>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     S2 — TRAINABLE WEIGHT MATRICES
+════════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="trainable-weights">
+  <div class="sec-tag">S2 — Trainable Weight Matrices</div>
+  <h2>The Three Trainable Weight Matrices</h2>
+  <p class="sec-intro">
+    We introduce three learnable projection matrices — $W_Q$, $W_K$, $W_V$ — that transform the input embeddings into separate "query", "key", and "value" spaces. These are the parameters that make self-attention powerful: they are updated during model training and are crucial to learn to predict well.
+  </p>
+
+  <div class="sub-h">Why Three Separate Projections?</div>
+  <div class="card-grid">
+    <div class="card blue">
+      <div class="card-title">Query (Q)</div>
+      <p>Represents the current token asking: <em>"How much attention should I pay to other tokens?"</em> The query is the "question".</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">Key (K)</div>
+      <p>Represents each token saying: <em>"How relevant am I?"</em> The key is what gets matched against the query.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Value (V)</div>
+      <p>Carries the <em>actual content</em> to aggregate. Once we know attention weights, we sum values weighted by those weights.</p>
+    </div>
+  </div>
+
+  <div class="callout amber" data-label="Intuition">
+    <p>Think of a library database. Your <strong>query</strong> is what you type in the search box. The book's <strong>key</strong> is its metadata (title, tags). The book's <strong>value</strong> is its actual content. High query-key similarity → you get that book's value.</p>
+  </div>
+
+  <div class="sub-h">Step 1 — Input Matrix (6 tokens × 3 dims)</div>
+  <p style="color:var(--muted);margin-bottom:.8rem">From our example: 6 tokens "your journey starts one step" (plus a padding token), each with a 3-dimensional embedding. The input matrix $X \in \mathbb{R}^{6 \times 3}$:</p>
+
+  <div class="mat-wrap">
+    <div>
+      <div class="mat">
+        <div class="mat-row">
+          <div class="mat-cell hl-cell">0.43</div><div class="mat-cell">0.15</div><div class="mat-cell">0.89</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.55</div><div class="mat-cell">0.87</div><div class="mat-cell">0.66</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.57</div><div class="mat-cell">0.85</div><div class="mat-cell">0.64</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.22</div><div class="mat-cell">0.58</div><div class="mat-cell">0.33</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.77</div><div class="mat-cell">0.25</div><div class="mat-cell">0.10</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.05</div><div class="mat-cell">0.20</div><div class="mat-cell">0.55</div>
+        </div>
+      </div>
+      <div class="mat-label">$X \in \mathbb{R}^{6 \times 3}$ — rows = token embeddings</div>
+    </div>
+  </div>
+
+  <div class="sub-h">The Three Trainable Weight Matrices</div>
+  <p style="color:var(--muted);margin-bottom:.8rem">These are <strong>learnable parameters</strong> (updated via backpropagation). They project the $d=3$ input embeddings into $d_k = d_v = 2$ dimensional query/key/value spaces.</p>
+
+  <div class="mat-wrap">
+    <div>
+      <div class="mat">
+        <div class="mat-row">
+          <div class="mat-cell hl-cell">0.1366</div><div class="mat-cell">0.1025</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.1841</div><div class="mat-cell">0.7264</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.3153</div><div class="mat-cell">0.6881</div>
+        </div>
+      </div>
+      <div class="mat-label">$W_Q \in \mathbb{R}^{3 \times 2}$</div>
+    </div>
+    <div style="align-self:center;font-size:1.5rem;color:var(--muted);padding:.5rem">×</div>
+    <div>
+      <div class="mat">
+        <div class="mat-row">
+          <div class="mat-cell hl-cell2">0.0756</div><div class="mat-cell hl-cell2">0.1966</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell hl-cell2">0.3164</div><div class="mat-cell hl-cell2">0.6007</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell hl-cell2">0.1186</div><div class="mat-cell hl-cell2">0.8274</div>
+        </div>
+      </div>
+      <div class="mat-label">$W_K \in \mathbb{R}^{3 \times 2}$</div>
+    </div>
+    <div style="align-self:center;font-size:1.5rem;color:var(--muted);padding:.5rem">×</div>
+    <div>
+      <div class="mat">
+        <div class="mat-row">
+          <div class="mat-cell hl-cell3">0.0256</div><div class="mat-cell hl-cell3">0.1966</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell hl-cell3">0.3164</div><div class="mat-cell hl-cell3">0.4007</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell hl-cell3">0.1186</div><div class="mat-cell hl-cell3">0.8274</div>
+        </div>
+      </div>
+      <div class="mat-label">$W_V \in \mathbb{R}^{3 \times 2}$</div>
+    </div>
+    <div style="align-self:center;font-size:1.5rem;color:var(--muted);padding:.5rem">→</div>
+    <div>
+      <div class="mat">
+        <div class="mat-row">
+          <div class="mat-cell hl-cell">0.1366</div><div class="mat-cell hl-cell">0.6966</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.3164</div><div class="mat-cell">0.4007</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">…</div><div class="mat-cell">…</div>
+        </div>
+      </div>
+      <div class="mat-label">$W_Y \in \mathbb{R}^{3 \times 2}$</div>
+    </div>
+  </div>
+
+  <div class="hl warn"><strong>Q:</strong> What are $W_Q$, $W_K$, and $W_V$?<br/>They are <strong>trainable parameters</strong> — their values are initialized randomly and learned via backpropagation. They are <strong>not the same as</strong> the Q, K, V matrices (which are computed each forward pass by multiplying $X$ with these weights).</div>
+
+  <div class="sub-h">Dimensions of W_Q, W_K, W_V</div>
+  <div class="mb">
+    $$W_Q \in \mathbb{R}^{d \times d_k}, \quad W_K \in \mathbb{R}^{d \times d_k}, \quad W_V \in \mathbb{R}^{d \times d_v}$$
+  </div>
+  <p style="color:var(--muted)">Where:</p>
+  <ul style="color:var(--muted);padding-left:1.4rem;line-height:2">
+    <li>$d$ = input embedding dimension</li>
+    <li>$d_k$ = output dimension for Query and Key (must match for dot product)</li>
+    <li>$d_v$ = output dimension for Value (can differ, but usually $d_k = d_v$)</li>
+    <li>In most cases $d_k = d_v = \frac{d_{\text{model}}}{h}$ where $h$ = number of attention heads</li>
+  </ul>
+  <div class="callout blue" data-label="BERT Example">
+    <p>BERT uses $d_{\text{model}} = 768$ and $h = 12$ heads, giving $d_k = d_v = 64$. So each weight matrix is $768 \times 64$.</p>
+  </div>
+
+  <div class="sub-h">Dimension Arithmetic (Our Example)</div>
+  <div class="mb">
+    $$X \cdot W_Q = \underbrace{(6 \times 3)}_{\text{input}} \cdot \underbrace{(3 \times 2)}_{\text{weight}} = \underbrace{(6 \times 2)}_{Q \text{ matrix}}$$
+  </div>
+  <p style="color:var(--muted)">Each of the 6 tokens gets projected into a 2-dimensional query vector. Same for $K$ and $V$.</p>
+
+  <div class="sub-h">PyTorch: Trainable Weight Matrices</div>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Defining W_Q, W_K, W_V as learnable parameters</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+<span class="cm"># concept: trainable projection matrices for self-attention</span>
+<span class="cm"># X shape: [T, d] — token embeddings</span>
+<span class="cm"># W_q, W_k, W_v shape: [d, d_k] — learnable weight matrices</span>
+<span class="cm"># Time: O(T * d * d_k) per projection | Space: O(d * d_k) per matrix</span>
+
+d, d_k = <span class="nu">3</span>, <span class="nu">2</span>   <span class="cm"># input dim=3, output dim=2</span>
+
+<span class="cm"># Random init — in real training these get updated by optimizer</span>
+torch.manual_seed(<span class="nu">123</span>)
+W_query = nn.<span class="cl">Parameter</span>(torch.<span class="fn">randn</span>(d, d_k))   <span class="cm"># [3, 2]</span>
+W_key   = nn.<span class="cl">Parameter</span>(torch.<span class="fn">randn</span>(d, d_k))   <span class="cm"># [3, 2]</span>
+W_value = nn.<span class="cl">Parameter</span>(torch.<span class="fn">randn</span>(d, d_k))   <span class="cm"># [3, 2]</span>
+
+<span class="cm"># Create example input — 6 tokens, 3-dim embeddings</span>
+X = torch.<span class="fn">tensor</span>([
+    [<span class="nu">0.43</span>, <span class="nu">0.15</span>, <span class="nu">0.89</span>],   <span class="cm"># x1 "your"</span>
+    [<span class="nu">0.55</span>, <span class="nu">0.87</span>, <span class="nu">0.66</span>],   <span class="cm"># x2 "journey"</span>
+    [<span class="nu">0.57</span>, <span class="nu">0.85</span>, <span class="nu">0.64</span>],   <span class="cm"># x3 "starts"</span>
+    [<span class="nu">0.22</span>, <span class="nu">0.58</span>, <span class="nu">0.33</span>],   <span class="cm"># x4 "one"</span>
+    [<span class="nu">0.77</span>, <span class="nu">0.25</span>, <span class="nu">0.10</span>],   <span class="cm"># x5 "step"</span>
+    [<span class="nu">0.05</span>, <span class="nu">0.20</span>, <span class="nu">0.55</span>],   <span class="cm"># x6 padding token</span>
+])   <span class="cm"># [6, 3]</span>
+
+<span class="cm"># Project into Q, K, V spaces</span>
+Q = X @ W_query   <span class="cm"># [6, 2] — query matrix</span>
+K = X @ W_key     <span class="cm"># [6, 2] — key matrix</span>
+V = X @ W_value   <span class="cm"># [6, 2] — value matrix</span>
+
+<span class="fn">print</span>(<span class="st">"W_query shape:"</span>, W_query.shape)   <span class="cm"># [3, 2]</span>
+<span class="fn">print</span>(<span class="st">"Q shape:"</span>, Q.shape)               <span class="cm"># [6, 2]</span>
+<span class="fn">print</span>(<span class="st">"K shape:"</span>, K.shape)               <span class="cm"># [6, 2]</span>
+<span class="fn">print</span>(<span class="st">"V shape:"</span>, V.shape)               <span class="cm"># [6, 2]</span>
+</pre>
+  </div>
+
+  <div class="hl success"><strong>Key Takeaway:</strong> $W_Q$, $W_K$, $W_V$ are the learnable parameters. They are responsible for learning different semantic roles from the same input — the query asks, the key matches, the value delivers content. This is why self-attention is so expressive.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     S3 — Q K V PROJECTIONS
+════════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="qkv-projections">
+  <div class="sec-tag">S3 — Q K V Projections</div>
+  <h2>Computing Query, Key, and Value Matrices</h2>
+  <p class="sec-intro">
+    Once we have the trainable weight matrices, we multiply the input embedding matrix $X$ by each of them to get the Query ($Q$), Key ($K$), and Value ($V$) matrices. These three matrices represent the input from three different "perspectives" — each learned to serve a distinct role in the attention mechanism.
+  </p>
+
+  <div class="sub-h">The Three Projections</div>
+  <div class="mb">
+    $$Q = X \cdot W_Q \quad \text{(Query space)}$$
+    $$K = X \cdot W_K \quad \text{(Key space)}$$
+    $$V = X \cdot W_V \quad \text{(Value space)}$$
+  </div>
+
+  <div class="sub-h">Why Project into Separate Spaces?</div>
+  <p style="color:var(--muted);margin-bottom:1rem">Instead of using the same embeddings for all purposes, the model learns:</p>
+  <ul style="color:var(--muted);padding-left:1.4rem;line-height:2">
+    <li>Use $Q$ to ask <em>"how much attention should I pay?"</em></li>
+    <li>Use $K$ to answer <em>"how relevant am I?"</em></li>
+    <li>Use $V$ to carry the <em>actual content to aggregate</em></li>
+  </ul>
+  <p style="color:var(--muted);margin-top:.8rem">They are responsible for learning <strong>different semantic roles from the same input</strong>. This is the key insight of multi-head attention — multiple sets of $(W_Q, W_K, W_V)$ learn different relationship patterns simultaneously.</p>
+
+  <div class="sub-h">Visual: Token-Level Projection</div>
+  <p style="color:var(--muted);margin-bottom:.8rem">Each input token $x^i$ gets projected into its own query $q^i$, key $k^i$, and value $v^i$ vectors:</p>
+
+  <div class="svg-wrap">
+    <svg viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <!-- Title row: tokens -->
+      <text x="70"  y="22" fill="#58a6ff" font-size="11" text-anchor="middle">your (x¹)</text>
+      <text x="220" y="22" fill="#58a6ff" font-size="11" text-anchor="middle">journey (x²)</text>
+      <text x="380" y="22" fill="#8b949e" font-size="10" text-anchor="middle">…</text>
+      <text x="490" y="22" fill="#58a6ff" font-size="11" text-anchor="middle">step (x⁵)</text>
+
+      <!-- Token embedding boxes -->
+      <rect x="30"  y="28" width="80" height="28" rx="4" fill="#1f2a3a" stroke="#58a6ff" stroke-width="1"/>
+      <text x="70"  y="47" fill="#e6edf3" font-size="10" text-anchor="middle">0.4|0.1|0.8</text>
+
+      <rect x="180" y="28" width="80" height="28" rx="4" fill="#1f2a3a" stroke="#58a6ff" stroke-width="1"/>
+      <text x="220" y="47" fill="#e6edf3" font-size="10" text-anchor="middle">9.8|9</text>
+
+      <rect x="455" y="28" width="80" height="28" rx="4" fill="#1f2a3a" stroke="#58a6ff" stroke-width="1"/>
+      <text x="495" y="47" fill="#e6edf3" font-size="10" text-anchor="middle">0.0|0.8|0.5</text>
+
+      <!-- Arrows down -->
+      <line x1="55"  y1="56" x2="45"  y2="95" stroke="#d29922" stroke-width="1.2" stroke-dasharray="3,2"/>
+      <line x1="70"  y1="56" x2="70"  y2="95" stroke="#d29922" stroke-width="1.2" stroke-dasharray="3,2"/>
+      <line x1="85"  y1="56" x2="95"  y2="95" stroke="#d29922" stroke-width="1.2" stroke-dasharray="3,2"/>
+
+      <line x1="205" y1="56" x2="195" y2="95" stroke="#d29922" stroke-width="1.2" stroke-dasharray="3,2"/>
+      <line x1="220" y1="56" x2="220" y2="95" stroke="#d29922" stroke-width="1.2" stroke-dasharray="3,2"/>
+      <line x1="235" y1="56" x2="245" y2="95" stroke="#d29922" stroke-width="1.2" stroke-dasharray="3,2"/>
+
+      <!-- W_Q W_K W_V labels -->
+      <text x="40"  y="88" fill="#d29922" font-size="9">W_Q</text>
+      <text x="70"  y="88" fill="#f69d50" font-size="9">W_K</text>
+      <text x="97"  y="88" fill="#3fb950" font-size="9">W_V</text>
+
+      <text x="192" y="88" fill="#d29922" font-size="9">W_Q</text>
+      <text x="218" y="88" fill="#f69d50" font-size="9">W_K</text>
+      <text x="245" y="88" fill="#3fb950" font-size="9">W_V</text>
+
+      <!-- Q K V output boxes row 1 -->
+      <rect x="22"  y="98" width="36" height="26" rx="3" fill="#2a2010" stroke="#d29922" stroke-width="1"/>
+      <text x="40"  y="115" fill="#d29922" font-size="9" text-anchor="middle">q¹</text>
+
+      <rect x="61"  y="98" width="36" height="26" rx="3" fill="#102010" stroke="#f69d50" stroke-width="1"/>
+      <text x="79"  y="115" fill="#f69d50" font-size="9" text-anchor="middle">k¹</text>
+
+      <rect x="100" y="98" width="36" height="26" rx="3" fill="#101a10" stroke="#3fb950" stroke-width="1"/>
+      <text x="118" y="115" fill="#3fb950" font-size="9" text-anchor="middle">v¹</text>
+
+      <rect x="174" y="98" width="36" height="26" rx="3" fill="#2a2010" stroke="#d29922" stroke-width="1"/>
+      <text x="192" y="115" fill="#d29922" font-size="9" text-anchor="middle">q²</text>
+
+      <rect x="213" y="98" width="36" height="26" rx="3" fill="#102010" stroke="#f69d50" stroke-width="1"/>
+      <text x="231" y="115" fill="#f69d50" font-size="9" text-anchor="middle">k²</text>
+
+      <rect x="252" y="98" width="36" height="26" rx="3" fill="#101a10" stroke="#3fb950" stroke-width="1"/>
+      <text x="270" y="115" fill="#3fb950" font-size="9" text-anchor="middle">v²</text>
+
+      <text x="370" y="115" fill="#8b949e" font-size="14" text-anchor="middle">…</text>
+
+      <rect x="437" y="98" width="36" height="26" rx="3" fill="#2a2010" stroke="#d29922" stroke-width="1"/>
+      <text x="455" y="115" fill="#d29922" font-size="9" text-anchor="middle">q⁵</text>
+
+      <rect x="476" y="98" width="36" height="26" rx="3" fill="#102010" stroke="#f69d50" stroke-width="1"/>
+      <text x="494" y="115" fill="#f69d50" font-size="9" text-anchor="middle">k⁵</text>
+
+      <rect x="515" y="98" width="36" height="26" rx="3" fill="#101a10" stroke="#3fb950" stroke-width="1"/>
+      <text x="533" y="115" fill="#3fb950" font-size="9" text-anchor="middle">v⁵</text>
+
+      <!-- Labels row -->
+      <text x="40"  y="143" fill="#d29922" font-size="9" text-anchor="middle">key k¹</text>
+      <text x="79"  y="143" fill="#f69d50" font-size="9" text-anchor="middle">val v¹</text>
+      <text x="118" y="143" fill="#3fb950" font-size="9" text-anchor="middle">q¹</text>
+
+      <!-- Legend bottom -->
+      <rect x="30"  y="168" width="12" height="12" rx="2" fill="#2a2010" stroke="#d29922"/>
+      <text x="46"  y="179" fill="#d29922" font-size="9">Query</text>
+      <rect x="100" y="168" width="12" height="12" rx="2" fill="#102010" stroke="#f69d50"/>
+      <text x="116" y="179" fill="#f69d50" font-size="9">Key</text>
+      <rect x="160" y="168" width="12" height="12" rx="2" fill="#101a10" stroke="#3fb950"/>
+      <text x="176" y="179" fill="#3fb950" font-size="9">Value</text>
+      <text x="250" y="179" fill="#8b949e" font-size="9">Each token gets its own q, k, v vector (2-dim in our example)</text>
+    </svg>
+  </div>
+
+  <div class="sub-h">Numerical Example: Computing q² (for "journey")</div>
+  <p style="color:var(--muted);margin-bottom:.8rem">Let's compute the query vector $q^2$ for the token "journey" ($x^2 = [0.55, 0.87, 0.66]$) using the $W_Q$ matrix:</p>
+
+  <div class="mb">
+    $$q^2 = x^2 \cdot W_Q = [0.55,\ 0.87,\ 0.66] \cdot \begin{bmatrix} 0.1366 & 0.1025 \\ 0.1841 & 0.7264 \\ 0.3153 & 0.6881 \end{bmatrix}$$
+  </div>
+  <div class="mb">
+    $$q^2_1 = 0.55 \times 0.1366 + 0.87 \times 0.1841 + 0.66 \times 0.3153$$
+    $$= 0.0751 + 0.1602 + 0.2081 = 0.4434$$
+  </div>
+  <div class="mb">
+    $$q^2_2 = 0.55 \times 0.1025 + 0.87 \times 0.7264 + 0.66 \times 0.6881$$
+    $$= 0.0564 + 0.6320 + 0.4542 = 1.1426$$
+  </div>
+  <div class="mb">
+    $$\therefore \quad q^2 = [0.4434,\ 1.1426] \in \mathbb{R}^{2}$$
+  </div>
+
+  <div class="hl"><strong>Note:</strong> Each token's query, key, and value are always 2D vectors in this example ($d_k = 2$). But in BERT they are 64-dimensional, and in GPT-3 they are 128-dimensional per head.</div>
+
+  <div class="sub-h">PyTorch: Computing All Q, K, V Matrices at Once</div>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Q K V projection with numerical verification</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch
+
+<span class="cm"># concept: project input embeddings into Q, K, V spaces</span>
+<span class="cm"># X shape: [T=6, d=3], W_q shape: [d=3, dk=2]</span>
+<span class="cm"># Q shape: [6, 2] — one 2D query vector per token</span>
+
+torch.manual_seed(<span class="nu">42</span>)
+X = torch.<span class="fn">tensor</span>([
+    [<span class="nu">0.43</span>, <span class="nu">0.15</span>, <span class="nu">0.89</span>],
+    [<span class="nu">0.55</span>, <span class="nu">0.87</span>, <span class="nu">0.66</span>],
+    [<span class="nu">0.57</span>, <span class="nu">0.85</span>, <span class="nu">0.64</span>],
+    [<span class="nu">0.22</span>, <span class="nu">0.58</span>, <span class="nu">0.33</span>],
+    [<span class="nu">0.77</span>, <span class="nu">0.25</span>, <span class="nu">0.10</span>],
+    [<span class="nu">0.05</span>, <span class="nu">0.20</span>, <span class="nu">0.55</span>],
+])   <span class="cm"># [6, 3]</span>
+
+W_q = torch.<span class="fn">tensor</span>([
+    [<span class="nu">0.1366</span>, <span class="nu">0.1025</span>],
+    [<span class="nu">0.1841</span>, <span class="nu">0.7264</span>],
+    [<span class="nu">0.3153</span>, <span class="nu">0.6881</span>],
+])   <span class="cm"># [3, 2]</span>
+
+W_k = torch.<span class="fn">tensor</span>([
+    [<span class="nu">0.0756</span>, <span class="nu">0.1966</span>],
+    [<span class="nu">0.3164</span>, <span class="nu">0.6007</span>],
+    [<span class="nu">0.1186</span>, <span class="nu">0.8274</span>],
+])   <span class="cm"># [3, 2]</span>
+
+W_v = torch.<span class="fn">tensor</span>([
+    [<span class="nu">0.0256</span>, <span class="nu">0.1966</span>],
+    [<span class="nu">0.3164</span>, <span class="nu">0.4007</span>],
+    [<span class="nu">0.1186</span>, <span class="nu">0.8274</span>],
+])   <span class="cm"># [3, 2]</span>
+
+Q = X @ W_q   <span class="cm"># [6, 2]</span>
+K = X @ W_k   <span class="cm"># [6, 2]</span>
+V = X @ W_v   <span class="cm"># [6, 2]</span>
+
+<span class="fn">print</span>(<span class="st">"Q matrix (6 query vectors):"</span>)
+<span class="fn">print</span>(Q.round(decimals=<span class="nu">4</span>))
+<span class="fn">print</span>(<span class="st">"q2 (journey query):"</span>, Q[<span class="nu">1</span>])   <span class="cm"># row index 1 = x²</span>
+</pre>
+  </div>
+
+  <div class="hl success"><strong>Key Takeaway:</strong> After projection, every token has three representations — a query vector (what it's looking for), a key vector (what it offers to others), and a value vector (what it contributes when selected). These are computed fresh each forward pass using the trained $W_Q$, $W_K$, $W_V$.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     S4 — ATTENTION SCORES
+════════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="attention-scores">
+  <div class="sec-tag">S4 — Attention Scores</div>
+  <h2>Computing Attention Scores</h2>
+  <p class="sec-intro">
+    Attention scores $\omega_{ij}$ measure how much token $i$ should attend to token $j$. They are computed as the <strong>dot product between the query of token $i$ and the key of token $j$</strong>. A high dot product means the query and key are well aligned — token $i$ finds token $j$ relevant.
+  </p>
+
+  <div class="sub-h">The Attention Score Formula</div>
+  <div class="mb">
+    $$\omega_{ij} = q^i \cdot k^j$$
+  </div>
+  <p style="color:var(--muted);margin-bottom:1rem">For all tokens at once, this is a single matrix multiplication:</p>
+  <div class="mb">
+    $$\Omega = Q \cdot K^\top \quad \in \mathbb{R}^{T \times T}$$
+  </div>
+  <p style="color:var(--muted)">Result: a $T \times T$ matrix. Entry $\Omega[i,j]$ = how much token $i$ attends to token $j$. Shape: $(6 \times 2) \cdot (2 \times 6) = 6 \times 6$.</p>
+
+  <div class="sub-h">Visual: Computing Attention Scores for Token "your" (x¹)</div>
+  <p style="color:var(--muted);margin-bottom:.8rem">Since we want to compute the context vector for token "your" ($x^1$), we use its query $q^1$ and compute dot products against all keys $k^1 \ldots k^6$:</p>
+
+  <div class="svg-wrap">
+    <svg viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <!-- Labels -->
+      <text x="30"  y="20" fill="#8b949e" font-size="10">your (x¹)</text>
+      <text x="200" y="20" fill="#8b949e" font-size="10">journey (x²)</text>
+      <text x="490" y="20" fill="#8b949e" font-size="10">step (x⁶)</text>
+
+      <!-- Input boxes row -->
+      <rect x="20"  y="26" width="76" height="26" rx="3" fill="#1a1f2a" stroke="#58a6ff" stroke-width="1"/>
+      <text x="58"  y="43" fill="#e6edf3" font-size="9" text-anchor="middle">0.4|0.1|0.8</text>
+
+      <rect x="190" y="26" width="76" height="26" rx="3" fill="#1a1f2a" stroke="#58a6ff" stroke-width="1"/>
+      <text x="228" y="43" fill="#e6edf3" font-size="9" text-anchor="middle">9.8|9</text>
+
+      <text x="365" y="43" fill="#8b949e" font-size="14" text-anchor="middle">…</text>
+
+      <rect x="460" y="26" width="76" height="26" rx="3" fill="#1a1f2a" stroke="#58a6ff" stroke-width="1"/>
+      <text x="498" y="43" fill="#e6edf3" font-size="9" text-anchor="middle">0.0|0.8|0.5</text>
+
+      <!-- W_q W_k arrows -->
+      <text x="35" y="72" fill="#d29922" font-size="9">W_Q↓</text>
+      <text x="67" y="72" fill="#f69d50" font-size="9">W_K↓</text>
+
+      <text x="205" y="72" fill="#f69d50" font-size="9">W_K↓</text>
+      <text x="460" y="72" fill="#f69d50" font-size="9">W_K↓</text>
+
+      <!-- Q and K boxes -->
+      <rect x="22"  y="78" width="40" height="24" rx="3" fill="#2a2010" stroke="#d29922" stroke-width="1.2"/>
+      <text x="42"  y="94" fill="#d29922" font-size="9" text-anchor="middle">q¹</text>
+
+      <rect x="66"  y="78" width="40" height="24" rx="3" fill="#102010" stroke="#f69d50" stroke-width="1"/>
+      <text x="86"  y="94" fill="#f69d50" font-size="9" text-anchor="middle">k¹</text>
+
+      <rect x="194" y="78" width="40" height="24" rx="3" fill="#102010" stroke="#f69d50" stroke-width="1"/>
+      <text x="214" y="94" fill="#f69d50" font-size="9" text-anchor="middle">k²</text>
+
+      <text x="365" y="94" fill="#8b949e" font-size="14" text-anchor="middle">…</text>
+
+      <rect x="460" y="78" width="40" height="24" rx="3" fill="#102010" stroke="#f69d50" stroke-width="1"/>
+      <text x="480" y="94" fill="#f69d50" font-size="9" text-anchor="middle">k⁶</text>
+
+      <!-- dot product lines from q¹ to all keys -->
+      <line x1="42" y1="102" x2="86"  y2="130" stroke="#d29922" stroke-width="1" stroke-dasharray="4,2"/>
+      <line x1="42" y1="102" x2="214" y2="130" stroke="#d29922" stroke-width="1" stroke-dasharray="4,2"/>
+      <line x1="42" y1="102" x2="365" y2="130" stroke="#d29922" stroke-width="1" stroke-dasharray="4,2"/>
+      <line x1="42" y1="102" x2="480" y2="130" stroke="#d29922" stroke-width="1" stroke-dasharray="4,2"/>
+
+      <!-- dot product symbol -->
+      <text x="42" y="126" fill="#8b949e" font-size="8" text-anchor="middle">q¹·k¹</text>
+      <text x="150" y="126" fill="#8b949e" font-size="8" text-anchor="middle">q¹·k²</text>
+      <text x="480" y="126" fill="#8b949e" font-size="8" text-anchor="middle">q¹·k⁶</text>
+
+      <!-- Score boxes -->
+      <rect x="22"  y="134" width="40" height="24" rx="3" fill="#2a1810" stroke="#f78166" stroke-width="1"/>
+      <text x="42"  y="150" fill="#f78166" font-size="9" text-anchor="middle">ω₁₁</text>
+
+      <rect x="130" y="134" width="40" height="24" rx="3" fill="#2a1810" stroke="#f78166" stroke-width="1"/>
+      <text x="150" y="150" fill="#f78166" font-size="9" text-anchor="middle">ω₁₂</text>
+
+      <text x="330" y="150" fill="#8b949e" font-size="14" text-anchor="middle">…</text>
+
+      <rect x="460" y="134" width="40" height="24" rx="3" fill="#2a1810" stroke="#f78166" stroke-width="1"/>
+      <text x="480" y="150" fill="#f78166" font-size="9" text-anchor="middle">ω₁₆</text>
+
+      <!-- Arrow down to attention scores label -->
+      <text x="260" y="180" fill="#8b949e" font-size="9" text-anchor="middle">Unscaled attention scores for token "your"</text>
+      <text x="260" y="200" fill="#f78166" font-size="9" text-anchor="middle">→ will be scaled by 1/√dk then softmax →  α₁₁, α₁₂ … α₁₆</text>
+
+      <!-- Shape annotation -->
+      <rect x="20"  y="218" width="640" height="30" rx="4" fill="#2c2c2a" stroke="#3a3a37"/>
+      <text x="340" y="237" fill="#58a6ff" font-size="10" text-anchor="middle">Full attention score matrix Ω = Q·Kᵀ  has shape [6×6] — one score per token pair</text>
+    </svg>
+  </div>
+
+  <div class="sub-h">Numerical: Full Attention Score Computation for "your" (x¹)</div>
+  <p style="color:var(--muted);margin-bottom:.8rem">Query for "your": $q^1 = [0.29, 0.53]$, Keys from the $K$ matrix:</p>
+
+  <div class="mat-wrap">
+    <div>
+      <div class="mat">
+        <div class="mat-row">
+          <div class="mat-cell hl-cell">0.23</div><div class="mat-cell">1.09</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.43</div><div class="mat-cell">1.45</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.43</div><div class="mat-cell">1.45</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.23</div><div class="mat-cell">0.65</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.13</div><div class="mat-cell">0.29</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.25</div><div class="mat-cell">1.05</div>
+        </div>
+      </div>
+      <div class="mat-label">Queries $Q$ [6×2]</div>
+    </div>
+    <div style="align-self:center;padding:.5rem;font-size:1.4rem;color:var(--muted)">×</div>
+    <div>
+      <div class="mat">
+        <div class="mat-row">
+          <div class="mat-cell hl-cell2">0.30</div><div class="mat-cell hl-cell2">0.43</div><div class="mat-cell hl-cell2">0.43</div><div class="mat-cell hl-cell2">0.18</div><div class="mat-cell hl-cell2">0.09</div><div class="mat-cell hl-cell2">0.21</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.65</div><div class="mat-cell">0.88</div><div class="mat-cell">0.86</div><div class="mat-cell">0.45</div><div class="mat-cell">0.12</div><div class="mat-cell">0.25</div>
+        </div>
+      </div>
+      <div class="mat-label">Keys $K^\top$ [2×6]</div>
+    </div>
+  </div>
+
+  <p style="color:var(--muted);margin-bottom:.8rem">All 6 scores for token "your" ($\omega_{11}$ through $\omega_{16}$):</p>
+
+  <div class="mb">
+    $$\omega_{11} = q^1 \cdot k^1 = (0.23)(0.30) + (1.09)(0.65) = 0.069 + 0.709 = \mathbf{0.778}$$
+    $$\omega_{12} = q^1 \cdot k^2 = (0.23)(0.43) + (1.09)(0.88) = 0.099 + 0.959 = \mathbf{1.058}$$
+    $$\omega_{13} = q^1 \cdot k^3 = (0.23)(0.43) + (1.09)(0.86) = 0.099 + 0.937 = \mathbf{1.036}$$
+    $$\omega_{14} = q^1 \cdot k^4 = (0.23)(0.18) + (1.09)(0.45) = 0.041 + 0.491 = \mathbf{0.532}$$
+    $$\omega_{15} = q^1 \cdot k^5 = (0.23)(0.09) + (1.09)(0.12) = 0.021 + 0.131 = \mathbf{0.152}$$
+    $$\omega_{16} = q^1 \cdot k^6 = (0.23)(0.21) + (1.09)(0.25) = 0.048 + 0.273 = \mathbf{0.321}$$
+  </div>
+
+  <p style="color:var(--muted);margin-bottom:.8rem">The full 6×6 attention score matrix (from the notes):</p>
+  <div class="mat-wrap">
+    <div>
+      <div class="mat">
+        <div class="mat-row">
+          <div class="mat-cell hl-cell">0.23</div><div class="mat-cell hl-cell">1.09</div>
+          <div class="mat-cell hl-cell">0.45</div><div class="mat-cell hl-cell">0.14</div>
+          <div class="mat-cell hl-cell">0.45</div><div class="mat-cell hl-cell">0.18</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.43</div><div class="mat-cell">1.45</div>
+          <div class="mat-cell">0.08</div><div class="mat-cell">0.14</div>
+          <div class="mat-cell">0.08</div><div class="mat-cell">0.32</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.43</div><div class="mat-cell">1.45</div>
+          <div class="mat-cell">0.08</div><div class="mat-cell">0.14</div>
+          <div class="mat-cell">0.08</div><div class="mat-cell">0.32</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.23</div><div class="mat-cell">0.65</div>
+          <div class="mat-cell">0.04</div><div class="mat-cell">0.06</div>
+          <div class="mat-cell">0.04</div><div class="mat-cell">0.14</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.13</div><div class="mat-cell">0.29</div>
+          <div class="mat-cell">0.02</div><div class="mat-cell">0.02</div>
+          <div class="mat-cell">0.02</div><div class="mat-cell">0.06</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.25</div><div class="mat-cell">1.05</div>
+          <div class="mat-cell">0.04</div><div class="mat-cell">0.12</div>
+          <div class="mat-cell">0.04</div><div class="mat-cell">0.16</div>
+        </div>
+      </div>
+      <div class="mat-label">Attention Score Matrix $\Omega = QK^\top \in \mathbb{R}^{6 \times 6}$</div>
+    </div>
+  </div>
+
+  <div class="hl warn"><strong>Problem with Raw Scores:</strong> When $d_k$ is large, the dot products can get very large in magnitude. Large values push softmax into a very sharp distribution (near 0/1) — the gradient becomes nearly zero almost everywhere, which hurts learning. This is why we scale by $\frac{1}{\sqrt{d_k}}$.</div>
+
+  <div class="sub-h">PyTorch: Computing the Full Attention Score Matrix</div>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Attention scores via Q·Kᵀ</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">import</span> math
+
+<span class="cm"># concept: compute raw attention scores as dot product of Q and K^T</span>
+<span class="cm"># Q shape: [T, dk], K shape: [T, dk]</span>
+<span class="cm"># Omega shape: [T, T] — score[i,j] = how much token i attends to token j</span>
+<span class="cm"># Time: O(T² · dk) | Space: O(T²)</span>
+
+<span class="cm"># Assume Q, K computed from previous step [6, 2]</span>
+Q = torch.<span class="fn">tensor</span>([
+    [<span class="nu">0.23</span>, <span class="nu">1.09</span>], [<span class="nu">0.43</span>, <span class="nu">1.45</span>],
+    [<span class="nu">0.43</span>, <span class="nu">1.45</span>], [<span class="nu">0.23</span>, <span class="nu">0.65</span>],
+    [<span class="nu">0.13</span>, <span class="nu">0.29</span>], [<span class="nu">0.25</span>, <span class="nu">1.05</span>],
+])
+
+K = torch.<span class="fn">tensor</span>([
+    [<span class="nu">0.30</span>, <span class="nu">0.65</span>], [<span class="nu">0.43</span>, <span class="nu">0.88</span>],
+    [<span class="nu">0.43</span>, <span class="nu">0.86</span>], [<span class="nu">0.18</span>, <span class="nu">0.45</span>],
+    [<span class="nu">0.09</span>, <span class="nu">0.12</span>], [<span class="nu">0.21</span>, <span class="nu">0.25</span>],
+])
+
+d_k = Q.shape[<span class="nu">-1</span>]   <span class="cm"># 2</span>
+
+<span class="cm"># Unscaled attention scores</span>
+omega = Q @ K.<span class="fn">T</span>          <span class="cm"># [6, 6]</span>
+
+<span class="cm"># Scaled attention scores</span>
+omega_scaled = omega / math.<span class="fn">sqrt</span>(d_k)   <span class="cm"># divide by √dk = √2 ≈ 1.414</span>
+
+<span class="fn">print</span>(<span class="st">"Omega (unscaled):"</span>, omega.shape)
+<span class="fn">print</span>(omega.<span class="fn">round</span>(decimals=<span class="nu">3</span>))
+<span class="fn">print</span>(<span class="st">"Scores for token 'your':"</span>, omega[<span class="nu">0</span>].<span class="fn">round</span>(decimals=<span class="nu">3</span>))
+</pre>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     S5 — SOFTMAX & SCALING
+════════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="softmax-scaling">
+  <div class="sec-tag">S5 — Softmax &amp; Scaling</div>
+  <h2>Scaled Dot-Product Attention: Softmax and Normalization</h2>
+  <p class="sec-intro">
+    Raw attention scores $\omega_{ij}$ can be any real number. We need to convert them into probabilities (attention weights $\alpha_{ij}$) that sum to 1. We do this with softmax — but first we <em>scale down</em> the scores by dividing by $\sqrt{d_k}$ to prevent the softmax from saturating.
+  </p>
+
+  <div class="sub-h">Why Scaling? — The Problem with Large Dot Products</div>
+  <div class="card-grid">
+    <div class="card red">
+      <div class="card-title">Problem</div>
+      <p>When $d_k$ is large, dot products grow in magnitude. Computing dot products of vectors with mean 0, variance 1 → the dot product has variance $d_k$. So standard deviation grows as $\sqrt{d_k}$.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">Effect on Softmax</div>
+      <p>Large values push softmax into a very "peaked" distribution — almost all weight on one token, near zero on others. Gradients become tiny → slower learning.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Solution</div>
+      <p>Divide by $\sqrt{d_k}$ before softmax. This keeps the variance of the dot products at ~1 regardless of $d_k$, giving softmax a well-conditioned input.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Full Formula: Scaled Dot-Product Attention</div>
+  <div class="mb">
+    $$\text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V$$
+  </div>
+  <p style="color:var(--muted);margin-bottom:.6rem">Step by step:</p>
+  <ol style="color:var(--muted);padding-left:1.4rem;line-height:2.2">
+    <li>Compute raw scores: $\Omega = QK^\top$ — shape $[T \times T]$</li>
+    <li>Scale: $\hat{\Omega} = \Omega / \sqrt{d_k}$ — prevents softmax saturation</li>
+    <li>Apply softmax row-wise: $A = \text{softmax}(\hat{\Omega})$ — shape $[T \times T]$, rows sum to 1</li>
+    <li>Weighted sum of values: $Z = A \cdot V$ — shape $[T \times d_v]$</li>
+  </ol>
+
+  <div class="sub-h">Interactive Step Navigator: Full Attention for Token "your"</div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin:1rem 0">
+    <div class="step on" id="attn-1">
+      <div class="sec-tag">STEP 1 OF 4</div>
+      <div class="sub-h" style="margin-top:.4rem">Raw Scores: q¹ · kʲ for all j</div>
+      <p style="color:var(--muted);margin-bottom:.8rem">Query for "your": $q^1 = (1.0, 0.2)$ (illustration). Dot product with each key:</p>
+      <div class="mb">
+        $$\omega_{11} = 0.778,\quad \omega_{12} = 1.058,\quad \omega_{13} = 1.036$$
+        $$\omega_{14} = 0.532,\quad \omega_{15} = 0.152,\quad \omega_{16} = 0.321$$
+      </div>
+      <div class="hl">These are unscaled — raw dot products. They can be any real value.</div>
+    </div>
+    <div class="step" id="attn-2">
+      <div class="sec-tag">STEP 2 OF 4</div>
+      <div class="sub-h" style="margin-top:.4rem">Scale by 1/√d_k</div>
+      <p style="color:var(--muted);margin-bottom:.8rem">$d_k = 2$, so $\sqrt{d_k} = \sqrt{2} \approx 1.414$. Divide all scores:</p>
+      <div class="mb">
+        $$\hat{\omega}_{11} = 0.778 / 1.414 = 0.550$$
+        $$\hat{\omega}_{12} = 1.058 / 1.414 = 0.748$$
+        $$\hat{\omega}_{13} = 1.036 / 1.414 = 0.733$$
+        $$\hat{\omega}_{14} = 0.532 / 1.414 = 0.376$$
+        $$\hat{\omega}_{15} = 0.152 / 1.414 = 0.107$$
+        $$\hat{\omega}_{16} = 0.321 / 1.414 = 0.227$$
+      </div>
+      <div class="hl warn"><strong>Note:</strong> Scaling makes the inputs to softmax more moderate — preventing the exponentials from becoming astronomically large.</div>
+    </div>
+    <div class="step" id="attn-3">
+      <div class="sec-tag">STEP 3 OF 4</div>
+      <div class="sub-h" style="margin-top:.4rem">Apply Softmax</div>
+      <p style="color:var(--muted);margin-bottom:.8rem">$\text{softmax}(z_i) = \frac{e^{z_i}}{\sum_j e^{z_j}}$. Compute exponentials:</p>
+      <div class="mb">
+        $$e^{0.550} = 1.733,\quad e^{0.748} = 2.113,\quad e^{0.733} = 2.081$$
+        $$e^{0.376} = 1.457,\quad e^{0.107} = 1.113,\quad e^{0.227} = 1.255$$
+      </div>
+      <div class="mb">
+        $$\text{Sum} = 1.733 + 2.113 + 2.081 + 1.457 + 1.113 + 1.255 = 9.752$$
+      </div>
+      <div class="mb">
+        $$\alpha_{11} = 1.733/9.752 = 0.178,\quad \alpha_{12} = 2.113/9.752 = 0.217$$
+        $$\alpha_{13} = 2.081/9.752 = 0.213,\quad \alpha_{14} = 1.457/9.752 = 0.149$$
+        $$\alpha_{15} = 1.113/9.752 = 0.114,\quad \alpha_{16} = 1.255/9.752 = 0.129$$
+      </div>
+      <p style="color:var(--muted);font-size:.85rem">Verify: $0.178 + 0.217 + 0.213 + 0.149 + 0.114 + 0.129 = 1.000$ ✓</p>
+      <div class="hl success"><strong>Result:</strong> Token "your" pays about 21.7% attention to "journey" — the highest in this row. These are the final attention weights $\alpha_{1j}$.</div>
+    </div>
+    <div class="step" id="attn-4">
+      <div class="sec-tag">STEP 4 OF 4</div>
+      <div class="sub-h" style="margin-top:.4rem">The 6×6 Attention Weight Matrix</div>
+      <p style="color:var(--muted);margin-bottom:.8rem">After applying row-wise softmax to the full scaled attention score matrix:</p>
+      <div class="mat-wrap">
+        <div>
+          <div class="mat">
+            <div class="mat-row">
+              <div class="mat-cell hl-cell">0.178</div><div class="mat-cell hl-cell">0.217</div><div class="mat-cell hl-cell">0.213</div><div class="mat-cell hl-cell">0.149</div><div class="mat-cell hl-cell">0.114</div><div class="mat-cell hl-cell">0.129</div>
+            </div>
+            <div class="mat-row">
+              <div class="mat-cell">0.156</div><div class="mat-cell">0.210</div><div class="mat-cell">0.209</div><div class="mat-cell">0.156</div><div class="mat-cell">0.127</div><div class="mat-cell">0.142</div>
+            </div>
+            <div class="mat-row">
+              <div class="mat-cell">0.156</div><div class="mat-cell">0.210</div><div class="mat-cell">0.209</div><div class="mat-cell">0.156</div><div class="mat-cell">0.127</div><div class="mat-cell">0.142</div>
+            </div>
+            <div class="mat-row">
+              <div class="mat-cell">0.167</div><div class="mat-cell">0.183</div><div class="mat-cell">0.183</div><div class="mat-cell">0.167</div><div class="mat-cell">0.150</div><div class="mat-cell">0.150</div>
+            </div>
+            <div class="mat-row">
+              <div class="mat-cell">0.171</div><div class="mat-cell">0.178</div><div class="mat-cell">0.178</div><div class="mat-cell">0.168</div><div class="mat-cell">0.153</div><div class="mat-cell">0.153</div>
+            </div>
+            <div class="mat-row">
+              <div class="mat-cell">0.165</div><div class="mat-cell">0.211</div><div class="mat-cell">0.209</div><div class="mat-cell">0.155</div><div class="mat-cell">0.117</div><div class="mat-cell">0.143</div>
+            </div>
+          </div>
+          <div class="mat-label">Attention Weight Matrix $A = \text{softmax}(\Omega/\sqrt{d_k}) \in \mathbb{R}^{6 \times 6}$, each row sums to 1</div>
+        </div>
+      </div>
+      <div class="hl">Each row is a probability distribution. Row $i$ tells you how token $i$ distributes its attention across all 6 tokens.</div>
+    </div>
+    <div class="step-ctrl">
+      <button class="btn" onclick="stepNav('attn',1,4,-1)">← Prev</button>
+      <span class="step-idx" id="attn-idx">Step 1 of 4</span>
+      <button class="btn" onclick="stepNav('attn',1,4,1)">Next →</button>
+    </div>
+  </div>
+
+  <div class="sub-h">Softmax Function — Full Formula</div>
+  <div class="mb">
+    $$\text{softmax}(z_i) = \frac{e^{z_i}}{\displaystyle\sum_{j=1}^{T} e^{z_j}}$$
+  </div>
+  <p style="color:var(--muted)">In practice, a <strong>numerically stable</strong> version subtracts the max before exponentiating:</p>
+  <div class="mb">
+    $$\text{softmax}(z_i) = \frac{e^{z_i - \max(z)}}{\displaystyle\sum_{j} e^{z_j - \max(z)}}$$
+  </div>
+  <p style="color:var(--muted)">This prevents overflow when $z_i$ values are large, while giving identical results mathematically.</p>
+
+  <div class="callout amber" data-label="Why Softmax?">
+    <p>Softmax converts any real-valued scores into a valid probability distribution (values in $(0,1)$ that sum to 1). This means attention weights can be interpreted as "percentage of attention" allocated to each token.</p>
+    <p>For each token $i$: <strong>attention it pays to itself</strong> + <strong>attention to all other tokens</strong> = 1.0.</p>
+  </div>
+
+  <div class="sub-h">PyTorch: Scaling + Softmax</div>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Scaled attention + softmax = attention weights</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn.functional <span class="kw">as</span> F
+<span class="kw">import</span> math
+
+<span class="cm"># concept: scaled dot-product attention — scores → weights</span>
+<span class="cm"># omega shape: [T, T], attention_weights shape: [T, T]</span>
+<span class="cm"># Each row of attention_weights sums to 1.0</span>
+
+omega = torch.<span class="fn">tensor</span>([
+    [<span class="nu">0.778</span>, <span class="nu">1.058</span>, <span class="nu">1.036</span>, <span class="nu">0.532</span>, <span class="nu">0.152</span>, <span class="nu">0.321</span>],
+    [<span class="nu">1.098</span>, <span class="nu">1.498</span>, <span class="nu">1.466</span>, <span class="nu">0.744</span>, <span class="nu">0.213</span>, <span class="nu">0.452</span>],
+    [<span class="nu">1.098</span>, <span class="nu">1.498</span>, <span class="nu">1.466</span>, <span class="nu">0.744</span>, <span class="nu">0.213</span>, <span class="nu">0.452</span>],
+    [<span class="nu">0.494</span>, <span class="nu">0.674</span>, <span class="nu">0.660</span>, <span class="nu">0.335</span>, <span class="nu">0.096</span>, <span class="nu">0.204</span>],
+    [<span class="nu">0.220</span>, <span class="nu">0.300</span>, <span class="nu">0.294</span>, <span class="nu">0.149</span>, <span class="nu">0.043</span>, <span class="nu">0.091</span>],
+    [<span class="nu">0.750</span>, <span class="nu">1.023</span>, <span class="nu">1.001</span>, <span class="nu">0.509</span>, <span class="nu">0.146</span>, <span class="nu">0.310</span>],
+])   <span class="cm"># [6, 6]</span>
+
+d_k = <span class="nu">2</span>
+
+<span class="cm"># Step 1: Scale</span>
+omega_scaled = omega / math.<span class="fn">sqrt</span>(d_k)   <span class="cm"># [6, 6] — prevents saturation</span>
+
+<span class="cm"># Step 2: Softmax row-wise (dim=-1 = across columns)</span>
+attention_weights = F.<span class="fn">softmax</span>(omega_scaled, dim=<span class="nu">-1</span>)   <span class="cm"># [6, 6]</span>
+
+<span class="fn">print</span>(<span class="st">"Attention weights for 'your' (row 0):"</span>)
+<span class="fn">print</span>(attention_weights[<span class="nu">0</span>].<span class="fn">round</span>(decimals=<span class="nu">4</span>))
+<span class="fn">print</span>(<span class="st">"Row sum (should be 1.0):"</span>, attention_weights[<span class="nu">0</span>].<span class="fn">sum</span>().item())
+<span class="fn">print</span>(<span class="st">"Full attention weight matrix:"</span>)
+<span class="fn">print</span>(attention_weights.<span class="fn">round</span>(decimals=<span class="nu">3</span>))
+</pre>
+  </div>
+
+  <div class="hl success"><strong>Key Takeaway:</strong> Scaling by $1/\sqrt{d_k}$ is not optional — it is critical for training stability. Without it, large $d_k$ values cause softmax saturation, leading to vanishing gradients. The formula $\text{Attention}(Q,K,V) = \text{softmax}(QK^\top / \sqrt{d_k}) \cdot V$ is the canonical scaled dot-product attention.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     S6 — CONTEXT VECTORS
+════════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="context-vectors">
+  <div class="sec-tag">S6 — Context Vectors</div>
+  <h2>Computing Context Vectors</h2>
+  <p class="sec-intro">
+    The final step in self-attention is using the attention weights $\alpha_{ij}$ to compute a <strong>context vector</strong> $z^i$ for each token. The context vector is a weighted sum of all value vectors — it represents the token's "context-aware" representation after attending to every other token.
+  </p>
+
+  <div class="sub-h">Context Vector Formula</div>
+  <div class="mb">
+    $$z^i = \sum_{j=1}^{T} \alpha_{ij} \cdot v^j$$
+  </div>
+  <p style="color:var(--muted);margin-bottom:.8rem">In matrix form for all tokens at once:</p>
+  <div class="mb">
+    $$Z = A \cdot V \quad \in \mathbb{R}^{T \times d_v}$$
+  </div>
+  <p style="color:var(--muted)">Where $A$ is the $[T \times T]$ attention weight matrix and $V$ is the $[T \times d_v]$ value matrix. Result: one $d_v$-dimensional context vector per token.</p>
+
+  <div class="sub-h">Numerical: Computing z² for "journey"</div>
+  <p style="color:var(--muted);margin-bottom:.8rem">Attention weights for "journey" (row 2 of $A$): $\alpha_{2,1}=0.156, \alpha_{2,2}=0.210, \alpha_{2,3}=0.209, \alpha_{2,4}=0.156, \alpha_{2,5}=0.127, \alpha_{2,6}=0.142$</p>
+  <p style="color:var(--muted);margin-bottom:.8rem">Value matrix $V \in \mathbb{R}^{6 \times 2}$ (computed as $V = X W_V$):</p>
+
+  <div class="mat-wrap">
+    <div>
+      <div class="mat">
+        <div class="mat-row"><div class="mat-cell hl-cell2">0.15</div><div class="mat-cell hl-cell2">0.55</div></div>
+        <div class="mat-row"><div class="mat-cell hl-cell2">0.29</div><div class="mat-cell hl-cell2">0.88</div></div>
+        <div class="mat-row"><div class="mat-cell hl-cell2">0.28</div><div class="mat-cell hl-cell2">0.86</div></div>
+        <div class="mat-row"><div class="mat-cell hl-cell2">0.12</div><div class="mat-cell hl-cell2">0.40</div></div>
+        <div class="mat-row"><div class="mat-cell hl-cell2">0.04</div><div class="mat-cell hl-cell2">0.17</div></div>
+        <div class="mat-row"><div class="mat-cell hl-cell2">0.07</div><div class="mat-cell hl-cell2">0.24</div></div>
+      </div>
+      <div class="mat-label">$V \in \mathbb{R}^{6 \times 2}$</div>
+    </div>
+  </div>
+
+  <div class="mb">
+    $$z^2_1 = 0.156(0.15) + 0.210(0.29) + 0.209(0.28) + 0.156(0.12) + 0.127(0.04) + 0.142(0.07)$$
+    $$= 0.023 + 0.061 + 0.059 + 0.019 + 0.005 + 0.010 = \mathbf{0.177}$$
+  </div>
+  <div class="mb">
+    $$z^2_2 = 0.156(0.55) + 0.210(0.88) + 0.209(0.86) + 0.156(0.40) + 0.127(0.17) + 0.142(0.24)$$
+    $$= 0.086 + 0.185 + 0.180 + 0.062 + 0.022 + 0.034 = \mathbf{0.569}$$
+  </div>
+  <div class="mb">
+    $$\therefore \quad z^2 = [0.177,\ 0.569] \in \mathbb{R}^{2}$$
+  </div>
+
+  <p style="color:var(--muted)">Similarly, context vectors for all 6 tokens are collected into a $6 \times 2$ context matrix $Z$. From the notes, the context matrix is:</p>
+
+  <div class="mat-wrap">
+    <div>
+      <div class="mat">
+        <div class="mat-row"><div class="mat-cell hl-cell">0.15</div><div class="mat-cell hl-cell">0.21</div></div>
+        <div class="mat-row"><div class="mat-cell hl-cell3">0.30</div><div class="mat-cell hl-cell3">0.29</div></div>
+        <div class="mat-row"><div class="mat-cell">0.35</div><div class="mat-cell">0.08</div></div>
+        <div class="mat-row"><div class="mat-cell">0.08</div><div class="mat-cell">0.90</div></div>
+        <div class="mat-row"><div class="mat-cell">…</div><div class="mat-cell">…</div></div>
+        <div class="mat-row"><div class="mat-cell">…</div><div class="mat-cell">…</div></div>
+      </div>
+      <div class="mat-label">$Z = A \cdot V \in \mathbb{R}^{6 \times 2}$ — context vectors</div>
+    </div>
+  </div>
+
+  <div class="sub-h">Intuition: What Q, K, V Represent in a Database Analogy</div>
+  <div class="card-grid">
+    <div class="card blue">
+      <div class="card-title">Query (Q)</div>
+      <p>Analogous to a <strong>search query</strong> in a database. It represents the current token's <em>information need</em>. The model uses $q^i$ to find which other tokens are relevant to token $i$.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">Key (K)</div>
+      <p>In attention mechanism, the sequence has a key that each item in the input sequence is written in. Keys are used to <strong>determine relevance</strong> — high $q \cdot k$ similarity means the model will focus on that token.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Value (V)</div>
+      <p>Represents the <strong>actual content</strong> or information. Once we know how relevant each token is (via attention weights), we take a weighted sum of values to construct the output. It determines <em>what information flows forward</em>.</p>
+    </div>
+  </div>
+
+  <div class="callout green" data-label="Key–Value in Attention vs. Database">
+    <p><strong>Keys:</strong> In attention, the sequence has a key that each item is written in. The key represents each input token. It is used to determine relevance because the model determines which keys (input tokens) are most relevant to focus on.</p>
+    <p><strong>Values:</strong> It represents the actual content of the input. The model outputs a value, then for each "journey", does NOT just give us query visits to all tokens — it gives us a <em>representation of each context</em> corresponding to the attention stops.</p>
+  </div>
+
+  <div class="sub-h">Complete Workflow Diagram</div>
+  <div class="svg-wrap">
+    <svg viewBox="0 0 680 380" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, monospace">
+      <!-- Input X -->
+      <rect x="270" y="10" width="140" height="36" rx="5" fill="#1a1f2a" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="340" y="33" fill="#58a6ff" font-size="11" text-anchor="middle">Input X  [6×3]</text>
+
+      <!-- Three arrows down to Wq Wk Wv -->
+      <line x1="310" y1="46" x2="120" y2="95" stroke="#d29922" stroke-width="1.5"/>
+      <line x1="340" y1="46" x2="340" y2="95" stroke="#f69d50" stroke-width="1.5"/>
+      <line x1="370" y1="46" x2="555" y2="95" stroke="#3fb950" stroke-width="1.5"/>
+
+      <!-- Wq, Wk, Wv boxes -->
+      <rect x="60"  y="98" width="120" height="30" rx="4" fill="#2a2010" stroke="#d29922" stroke-width="1.2"/>
+      <text x="120" y="117" fill="#d29922" font-size="10" text-anchor="middle">W_Q  [3×2]</text>
+
+      <rect x="280" y="98" width="120" height="30" rx="4" fill="#102010" stroke="#f69d50" stroke-width="1.2"/>
+      <text x="340" y="117" fill="#f69d50" font-size="10" text-anchor="middle">W_K  [3×2]</text>
+
+      <rect x="500" y="98" width="120" height="30" rx="4" fill="#101a10" stroke="#3fb950" stroke-width="1.2"/>
+      <text x="560" y="117" fill="#3fb950" font-size="10" text-anchor="middle">W_V  [3×2]</text>
+
+      <!-- Arrows down to Q K V -->
+      <line x1="120" y1="128" x2="120" y2="158" stroke="#d29922" stroke-width="1.5"/>
+      <line x1="340" y1="128" x2="340" y2="158" stroke="#f69d50" stroke-width="1.5"/>
+      <line x1="560" y1="128" x2="560" y2="158" stroke="#3fb950" stroke-width="1.5"/>
+
+      <!-- Q K V result boxes -->
+      <rect x="60"  y="160" width="120" height="30" rx="4" fill="#1a1808" stroke="#d29922" stroke-width="1.2"/>
+      <text x="120" y="179" fill="#d29922" font-size="10" text-anchor="middle">Q = XWq  [6×2]</text>
+
+      <rect x="280" y="160" width="120" height="30" rx="4" fill="#0a180a" stroke="#f69d50" stroke-width="1.2"/>
+      <text x="340" y="179" fill="#f69d50" font-size="10" text-anchor="middle">K = XWk  [6×2]</text>
+
+      <rect x="500" y="160" width="120" height="30" rx="4" fill="#0a180a" stroke="#3fb950" stroke-width="1.2"/>
+      <text x="560" y="179" fill="#3fb950" font-size="10" text-anchor="middle">V = XWv  [6×2]</text>
+
+      <!-- Q·Kᵀ arrow -->
+      <line x1="120" y1="190" x2="220" y2="228" stroke="#d29922" stroke-width="1.2" stroke-dasharray="4,2"/>
+      <line x1="340" y1="190" x2="280" y2="228" stroke="#f69d50" stroke-width="1.2" stroke-dasharray="4,2"/>
+      <text x="240" y="222" fill="#8b949e" font-size="9" text-anchor="middle">Q·Kᵀ</text>
+
+      <!-- Scores box -->
+      <rect x="175" y="230" width="170" height="30" rx="4" fill="#2a1010" stroke="#f78166" stroke-width="1.2"/>
+      <text x="260" y="249" fill="#f78166" font-size="10" text-anchor="middle">Scores Ω=QKᵀ  [6×6]</text>
+
+      <!-- Scale + softmax -->
+      <line x1="260" y1="260" x2="260" y2="288" stroke="#f78166" stroke-width="1.5"/>
+      <text x="360" y="278" fill="#8b949e" font-size="9">÷ √dk  then softmax(row-wise)</text>
+
+      <rect x="175" y="290" width="170" height="30" rx="4" fill="#1a2810" stroke="#3fb950" stroke-width="1.2"/>
+      <text x="260" y="309" fill="#3fb950" font-size="10" text-anchor="middle">Weights A  [6×6]</text>
+
+      <!-- A·V arrow -->
+      <line x1="340" y1="310" x2="360" y2="330" stroke="#3fb950" stroke-width="1.2" stroke-dasharray="4,2"/>
+      <line x1="560" y1="190" x2="420" y2="330" stroke="#3fb950" stroke-width="1.2" stroke-dasharray="4,2"/>
+      <text x="490" y="325" fill="#8b949e" font-size="9">A · V</text>
+
+      <!-- Context vectors output -->
+      <rect x="255" y="335" width="200" height="34" rx="5" fill="#18281a" stroke="#3fb950" stroke-width="1.8"/>
+      <text x="355" y="357" fill="#3fb950" font-size="11" text-anchor="middle">Context Vectors Z  [6×2]</text>
+    </svg>
+  </div>
+
+  <div class="sub-h">PyTorch: Full Self-Attention Forward Pass</div>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Complete self-attention computation</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn.functional <span class="kw">as</span> F
+<span class="kw">import</span> math
+
+<span class="cm"># concept: full scaled dot-product self-attention</span>
+<span class="cm"># X: [T, d], Wq/Wk/Wv: [d, dk]</span>
+<span class="cm"># Z: [T, dv] — context vectors for all tokens</span>
+<span class="cm"># Time: O(T²·dk + T·dk·dv) | Space: O(T² + T·dv)</span>
+
+torch.manual_seed(<span class="nu">42</span>)
+T, d, d_k = <span class="nu">6</span>, <span class="nu">3</span>, <span class="nu">2</span>
+d_v = d_k   <span class="cm"># value dim = key dim</span>
+
+X = torch.<span class="fn">randn</span>(T, d)   <span class="cm"># [6, 3]</span>
+
+<span class="cm"># Learnable weight matrices</span>
+W_q = torch.<span class="fn">randn</span>(d, d_k)   <span class="cm"># [3, 2]</span>
+W_k = torch.<span class="fn">randn</span>(d, d_k)   <span class="cm"># [3, 2]</span>
+W_v = torch.<span class="fn">randn</span>(d, d_v)   <span class="cm"># [3, 2]</span>
+
+<span class="cm"># Step 1: Project into Q, K, V</span>
+Q = X @ W_q   <span class="cm"># [6, 2]</span>
+K = X @ W_k   <span class="cm"># [6, 2]</span>
+V = X @ W_v   <span class="cm"># [6, 2]</span>
+
+<span class="cm"># Step 2: Compute scaled attention scores</span>
+scores = (Q @ K.<span class="fn">T</span>) / math.<span class="fn">sqrt</span>(d_k)   <span class="cm"># [6, 6]</span>
+
+<span class="cm"># Step 3: Softmax → attention weights</span>
+alpha = F.<span class="fn">softmax</span>(scores, dim=<span class="nu">-1</span>)   <span class="cm"># [6, 6], rows sum to 1</span>
+
+<span class="cm"># Step 4: Weighted sum of values → context vectors</span>
+Z = alpha @ V   <span class="cm"># [6, 2] — context vectors</span>
+
+<span class="fn">print</span>(<span class="st">"Context vectors Z:"</span>)
+<span class="fn">print</span>(Z.<span class="fn">round</span>(decimals=<span class="nu">4</span>))
+<span class="fn">print</span>(<span class="st">"Z shape:"</span>, Z.shape)   <span class="cm"># [6, 2]</span>
+<span class="fn">print</span>(<span class="st">"Attn weights row 0 (your):"</span>, alpha[<span class="nu">0</span>].<span class="fn">round</span>(decimals=<span class="nu">4</span>))
+</pre>
+  </div>
+
+  <div class="hl success"><strong>Key Takeaway:</strong> Context vector $z^i$ encodes a <em>contextually-aware</em> representation of token $i$ — it has "seen" all other tokens via the attention weights. High attention weight $\alpha_{ij}$ means token $i$ "borrows" more information from token $j$'s value vector. This is how transformers capture long-range dependencies.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     S7 — IMPLEMENTATION AS A CLASS
+════════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="implementation">
+  <div class="sec-tag">S7 — Implementation</div>
+  <h2>Implementing Self-Attention as a Python Class</h2>
+  <p class="sec-intro">
+    Now we put everything together into a compact, reusable <code>SelfAttention</code> Python class. Self-attention involves the three trainable weight matrices $W_Q$, $W_K$, $W_V$ transforming input data into query, key, and value vectors — then applying scaled dot-product attention to produce context vectors.
+  </p>
+
+  <div class="sub-h">Complete Workflow (from notes)</div>
+  <div class="pipeline">
+    <div class="pipe-box accent">Input X [T×d]</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">Q=XWq, K=XWk, V=XWv</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">Scores = QKᵀ/√dk</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box">Softmax → α</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Z = αV</div>
+  </div>
+
+  <div class="callout blue" data-label="What's Inside SelfAttention">
+    <p>The class holds three weight matrices as trainable parameters: <strong>$W_Q$</strong> (projects input to query space), <strong>$W_K$</strong> (projects input to key space), <strong>$W_V$</strong> (projects input to value space). These are the components of the attention mechanism that give it expressive power.</p>
+    <p>A huge matrix transforms the input data into query, key, and value, which are the current query token and its corresponding context vector.</p>
+  </div>
+
+  <div class="sub-h">PyTorch: Self-Attention Class</div>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Compact SelfAttention nn.Module</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+<span class="kw">import</span> torch.nn.functional <span class="kw">as</span> F
+<span class="kw">import</span> math
+
+<span class="cm"># concept: self-attention with trainable W_q, W_k, W_v</span>
+<span class="cm"># Forward: X [T, d] → Z [T, d_v] (context vectors)</span>
+<span class="cm"># Trainable params: 3 matrices of shape [d, d_k]</span>
+
+<span class="kw">class</span> <span class="cl">SelfAttention</span>(nn.<span class="cl">Module</span>):
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="id2">self</span>, d_in, d_out, bias=<span class="kw">False</span>):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="cm"># Three linear layers = three weight matrices (bias=False to match math)</span>
+        <span class="id2">self</span>.W_query = nn.<span class="cl">Linear</span>(d_in, d_out, bias=bias)  <span class="cm"># [d_in, d_out]</span>
+        <span class="id2">self</span>.W_key   = nn.<span class="cl">Linear</span>(d_in, d_out, bias=bias)  <span class="cm"># [d_in, d_out]</span>
+        <span class="id2">self</span>.W_value = nn.<span class="cl">Linear</span>(d_in, d_out, bias=bias)  <span class="cm"># [d_in, d_out]</span>
+        <span class="id2">self</span>.d_out = d_out
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="id2">self</span>, x):
+        <span class="cm"># x: [T, d_in]  — token embeddings</span>
+        Q = <span class="id2">self</span>.W_query(x)   <span class="cm"># [T, d_out]</span>
+        K = <span class="id2">self</span>.W_key(x)     <span class="cm"># [T, d_out]</span>
+        V = <span class="id2">self</span>.W_value(x)   <span class="cm"># [T, d_out]</span>
+
+        <span class="cm"># Scaled dot-product attention</span>
+        scores = (Q @ K.<span class="fn">transpose</span>(<span class="nu">-2</span>, <span class="nu">-1</span>)) / math.<span class="fn">sqrt</span>(<span class="id2">self</span>.d_out)   <span class="cm"># [T, T]</span>
+        alpha  = F.<span class="fn">softmax</span>(scores, dim=<span class="nu">-1</span>)   <span class="cm"># [T, T] — attention weights</span>
+        z      = alpha @ V                      <span class="cm"># [T, d_out] — context vectors</span>
+        <span class="kw">return</span> z
+
+<span class="cm"># ── Test ──</span>
+torch.manual_seed(<span class="nu">42</span>)
+d_in, d_out = <span class="nu">3</span>, <span class="nu">2</span>
+sa = <span class="cl">SelfAttention</span>(d_in, d_out)
+
+X = torch.<span class="fn">tensor</span>([
+    [<span class="nu">0.43</span>, <span class="nu">0.15</span>, <span class="nu">0.89</span>],   <span class="cm"># "your"</span>
+    [<span class="nu">0.55</span>, <span class="nu">0.87</span>, <span class="nu">0.66</span>],   <span class="cm"># "journey"</span>
+    [<span class="nu">0.57</span>, <span class="nu">0.85</span>, <span class="nu">0.64</span>],   <span class="cm"># "starts"</span>
+    [<span class="nu">0.22</span>, <span class="nu">0.58</span>, <span class="nu">0.33</span>],   <span class="cm"># "one"</span>
+    [<span class="nu">0.77</span>, <span class="nu">0.25</span>, <span class="nu">0.10</span>],   <span class="cm"># "step"</span>
+    [<span class="nu">0.05</span>, <span class="nu">0.20</span>, <span class="nu">0.55</span>],   <span class="cm"># padding</span>
+])   <span class="cm"># [6, 3]</span>
+
+Z = sa(X)
+<span class="fn">print</span>(<span class="st">"Context vectors:"</span>)
+<span class="fn">print</span>(Z.<span class="fn">detach</span>().<span class="fn">round</span>(decimals=<span class="nu">4</span>))
+<span class="fn">print</span>(<span class="st">"Output shape:"</span>, Z.shape)   <span class="cm"># [6, 2]</span>
+
+<span class="cm"># Count trainable parameters</span>
+total = <span class="fn">sum</span>(p.<span class="fn">numel</span>() <span class="kw">for</span> p <span class="kw">in</span> sa.<span class="fn">parameters</span>())
+<span class="fn">print</span>(<span class="st">"Trainable params:"</span>, total)   <span class="cm"># 3 × (3×2) = 18</span>
+</pre>
+  </div>
+
+  <div class="sub-h">Complete Workflow from the Notes (Numerical)</div>
+  <p style="color:var(--muted);margin-bottom:.8rem">For our running example with $d=3$, $d_k=2$, $T=6$ tokens — the embedding vector for the second input token is:</p>
+  <div class="mat-wrap">
+    <div>
+      <div class="mat">
+        <div class="mat-row">
+          <div class="mat-cell hl-cell">0.13</div><div class="mat-cell hl-cell">0.023</div><div class="mat-cell hl-cell">0.023</div>
+          <div class="mat-cell hl-cell2">0.010</div><div class="mat-cell hl-cell2">0.015</div><div class="mat-cell hl-cell2">0.015</div>
+        </div>
+      </div>
+      <div class="mat-label">Context vector $z^2$ = [0.13, 0.023, ...] embedding</div>
+    </div>
+  </div>
+
+  <p style="color:var(--muted);margin-bottom:1rem">The context matrix $Z$ (output) has one row per token, shape $n=6$:</p>
+
+  <div class="mat-wrap">
+    <div>
+      <div class="mat">
+        <div class="mat-row">
+          <div class="mat-cell hl-cell">0.13</div><div class="mat-cell hl-cell">0.023</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell hl-cell2">0.023</div><div class="mat-cell hl-cell2">0.023</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.010</div><div class="mat-cell">0.015</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">0.010</div><div class="mat-cell">0.015</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">…</div><div class="mat-cell">…</div>
+        </div>
+        <div class="mat-row">
+          <div class="mat-cell">…</div><div class="mat-cell">…</div>
+        </div>
+      </div>
+      <div class="mat-label">$Z$ — context vectors, h=6 (second output, "journey" context vector)</div>
+    </div>
+  </div>
+
+  <div class="hl"><strong>Note — Next Section:</strong> In the next section we will look at <strong>causal attention</strong> — a modification where each token can only attend to tokens at the same position or earlier (no "looking ahead"). This is essential for autoregressive language models like GPT.</div>
+
+  <div class="hl warn"><strong>Key Design Points:</strong>
+    <ul style="margin-top:.5rem;padding-left:1.2rem;line-height:2">
+      <li>Using <code>nn.Linear(bias=False)</code> is equivalent to <code>x @ W.T</code> — PyTorch stores weights transposed</li>
+      <li>The three weight matrices are independent — they can learn completely different projections</li>
+      <li>For multi-head attention, we stack $h$ sets of $(W_Q^{(i)}, W_K^{(i)}, W_V^{(i)})$</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     S8 — SUMMARY
+════════════════════════════════════════════════════════ -->
+<section class="sec reveal" id="summary">
+  <div class="sec-tag">S8 — Summary</div>
+  <h2>Summary — Self-Attention with Trainable Weights</h2>
+  <p class="sec-intro">
+    A complete reference of all key formulas, shapes, and insights from these notes on scaled dot-product self-attention with learnable projection matrices.
+  </p>
+
+  <div class="sub-h">Complete Formula Reference</div>
+  <div class="mb">
+    $$Q = XW_Q,\quad K = XW_K,\quad V = XW_V$$
+    $$\Omega = QK^\top \quad \text{(raw attention scores)}$$
+    $$A = \text{softmax}\!\left(\frac{\Omega}{\sqrt{d_k}}\right) \quad \text{(attention weights)}$$
+    $$Z = AV \quad \text{(context vectors)}$$
+  </div>
+
+  <div class="sub-h">All Shapes at a Glance</div>
+  <table>
+    <tr><th>Symbol</th><th>Meaning</th><th>Shape</th><th>Notes</th></tr>
+    <tr><td class="blue">$X$</td><td>Input embeddings</td><td class="val">$[T \times d]$</td><td>$T$ tokens, $d$ dims each</td></tr>
+    <tr><td class="amber">$W_Q, W_K$</td><td>Query/Key weight matrices</td><td class="val">$[d \times d_k]$</td><td>Learnable parameters</td></tr>
+    <tr><td class="green">$W_V$</td><td>Value weight matrix</td><td class="val">$[d \times d_v]$</td><td>Usually $d_v = d_k$</td></tr>
+    <tr><td class="amber">$Q, K$</td><td>Query / Key matrices</td><td class="val">$[T \times d_k]$</td><td>Computed each forward pass</td></tr>
+    <tr><td class="green">$V$</td><td>Value matrix</td><td class="val">$[T \times d_v]$</td><td>Computed each forward pass</td></tr>
+    <tr><td class="acc">$\Omega$</td><td>Attention scores (raw)</td><td class="val">$[T \times T]$</td><td>$QK^\top$, can be any real number</td></tr>
+    <tr><td class="blue">$A$</td><td>Attention weights</td><td class="val">$[T \times T]$</td><td>Each row sums to 1</td></tr>
+    <tr><td class="green">$Z$</td><td>Context vectors</td><td class="val">$[T \times d_v]$</td><td>Final output of self-attention</td></tr>
+  </table>
+
+  <div class="sub-h">Section-by-Section Summary</div>
+  <table>
+    <tr><th>Section</th><th>Topic</th><th>Key Formula / Fact</th></tr>
+    <tr><td class="blue">S1</td><td>Overview</td><td>Context vector $z^i = \sum_j \alpha_{ij} x^j$; trainable SA extends simplified SA</td></tr>
+    <tr><td class="amber">S2</td><td>Trainable Weights</td><td>$W_Q, W_K, W_V \in \mathbb{R}^{d \times d_k}$; updated via backprop; BERT: $d=768, d_k=64, h=12$</td></tr>
+    <tr><td class="green">S3</td><td>Q K V Projections</td><td>$Q = XW_Q$; each token gets its own $q^i, k^i, v^i$ in $d_k$-dim space</td></tr>
+    <tr><td class="acc">S4</td><td>Attention Scores</td><td>$\omega_{ij} = q^i \cdot k^j$; full matrix $\Omega = QK^\top \in \mathbb{R}^{T \times T}$</td></tr>
+    <tr><td class="blue">S5</td><td>Softmax &amp; Scaling</td><td>Scale by $1/\sqrt{d_k}$ prevents saturation; softmax normalizes row-wise</td></tr>
+    <tr><td class="green">S6</td><td>Context Vectors</td><td>$Z = AV$; Q=search query, K=index, V=content</td></tr>
+    <tr><td class="amber">S7</td><td>Implementation</td><td><code>SelfAttention(nn.Module)</code> with 3 <code>nn.Linear(bias=False)</code> layers</td></tr>
+  </table>
+
+  <div class="sub-h">All Major Topics Covered</div>
+  <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0">
+    <span class="tag red">Self-Attention</span>
+    <span class="tag amber">W_Q W_K W_V</span>
+    <span class="tag">Q K V Projections</span>
+    <span class="tag">Dot-Product Scores</span>
+    <span class="tag red">Scaled by √dk</span>
+    <span class="tag green">Softmax</span>
+    <span class="tag">Attention Weights α</span>
+    <span class="tag green">Context Vectors</span>
+    <span class="tag amber">Gradient Stability</span>
+    <span class="tag">nn.Module</span>
+    <span class="tag">GPT / BERT</span>
+  </div>
+
+  <div class="hl success">
+    <strong>The Complete Self-Attention Recipe:</strong>
+    <ol style="margin-top:.7rem;padding-left:1.4rem;line-height:2.2">
+      <li>Project inputs: $Q = XW_Q$, $K = XW_K$, $V = XW_V$</li>
+      <li>Compute scores: $\Omega = QK^\top$</li>
+      <li>Scale: $\hat{\Omega} = \Omega / \sqrt{d_k}$</li>
+      <li>Normalize: $A = \text{softmax}(\hat{\Omega})$ row-wise</li>
+      <li>Aggregate: $Z = AV$ — context vectors, one per token</li>
+    </ol>
+    The three weight matrices $W_Q$, $W_K$, $W_V$ are the only trainable parameters — they learn to project the input into spaces where meaningful attention patterns emerge.
+  </div>
+</section>
+
+<div style="text-align:center;padding:2rem;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.75rem;border-top:1px solid var(--border)">
+  Self-Attention with Trainable Weights — Deep Learning Notes &nbsp;·&nbsp; Next: Causal Attention
+</div>
+
+<script>
+// Sidebar
+let sidebarOpen = true;
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  document.getElementById('sidebar').classList.toggle('open', sidebarOpen);
+  document.body.classList.toggle('sidebar-open', sidebarOpen);
+  document.getElementById('sb-btn').innerHTML = sidebarOpen ? '&#8249;&#8249;' : '&#8250;&#8250;';
+}
+
+// Active nav
+const sections = document.querySelectorAll('section[id]');
+const topLinks = document.querySelectorAll('.nav-scrolllinks a');
+const sbLinks  = document.querySelectorAll('.sb-link');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const href = '#' + e.target.id;
+      topLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === href));
+      sbLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === href));
+    }
+  });
+}, { threshold: 0.25 });
+sections.forEach(s => obs.observe(s));
+
+// Reveal on scroll
+document.querySelectorAll('.reveal').forEach(el =>
+  new IntersectionObserver(([e]) => e.isIntersecting && e.target.classList.add('show'), { threshold: 0.06 }).observe(el)
+);
+
+// Progress bar
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+  document.getElementById('progress').style.width = pct + '%';
+});
+
+// Step navigator
+const stepState = {};
+function stepNav(id, min, max, dir) {
+  if (stepState[id] === undefined) stepState[id] = min;
+  const old = document.getElementById(id + '-' + stepState[id]);
+  if (old) old.classList.remove('on');
+  stepState[id] = Math.min(max, Math.max(min, stepState[id] + dir));
+  const next = document.getElementById(id + '-' + stepState[id]);
+  if (next) next.classList.add('on');
+  const idx = document.getElementById(id + '-idx');
+  if (idx) idx.textContent = 'Step ' + stepState[id] + ' of ' + max;
+}
+
+// Copy code
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 1800);
+  });
+}
+
+// KaTeX
+document.addEventListener('DOMContentLoaded', () => {
+  renderMathInElement(document.body, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true },
+      { left: '$',  right: '$',  display: false }
+    ],
+    throwOnError: false
+  });
+});
+</script>
+</body>
+</html>

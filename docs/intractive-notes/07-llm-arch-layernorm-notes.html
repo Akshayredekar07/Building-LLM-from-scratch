@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>LLM Architecture &amp; Layer Normalization — Deep Learning Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,700;1,400&family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+<style>
+:root{
+  --bg:#1f1f1e;--bg2:#2c2c2a;--bg3:#121212;--text:#e6edf3;--muted:#8b949e;
+  --accent:#f78166;--accent2:#d29922;--accent3:#58a6ff;--accent4:#3fb950;
+  --border:#3a3a37;--sidebar-w:240px;
+  --grad-accent:linear-gradient(135deg,#f78166 0%,#d29922 100%);
+  --card-glow:0 0 0 1px #3a3a37,0 4px 24px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.95rem;line-height:1.7;padding-top:51px;transition:padding-left .3s}
+body.sidebar-open{padding-left:var(--sidebar-w)}
+#prog{position:fixed;top:0;left:0;height:3px;background:var(--grad-accent);z-index:9999;width:0%;transition:width .15s}
+nav.topnav{position:fixed;top:3px;left:0;right:0;height:48px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.2rem;gap:1rem;z-index:8000}
+.nav-brand{font-family:'Playfair Display',serif;font-size:1rem;color:#fff;letter-spacing:.01em;white-space:nowrap;font-weight:700}
+.nav-toggle{background:none;border:1px solid var(--border);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:.8rem;padding:.2rem .55rem;border-radius:5px;cursor:pointer;transition:all .2s}
+.nav-scrolllinks{display:flex;gap:1rem;overflow-x:auto;flex:1;scrollbar-width:none}
+.nav-scrolllinks a{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted);transition:color .2s;white-space:nowrap;text-decoration:none}
+.nav-scrolllinks a.active,.nav-scrolllinks a:hover{color:var(--accent3)}
+#sidebar{position:fixed;top:51px;left:0;bottom:0;width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);z-index:7000;overflow-y:auto;transform:translateX(-100%);transition:transform .3s;padding-bottom:2rem}
+#sidebar.open{transform:translateX(0)}
+.sb-title{font-family:'Playfair Display',serif;font-size:.85rem;color:#fff;padding:1rem 1rem .6rem;border-bottom:1px solid var(--border);font-weight:700}
+.sb-link{display:flex;align-items:center;gap:.6rem;padding:.55rem 1rem;font-family:'DM Sans',sans-serif;font-size:.82rem;color:var(--muted);border-left:3px solid transparent;text-decoration:none;transition:all .2s}
+.sb-link.active{color:var(--accent);background:rgba(247,129,102,.08);border-left-color:var(--accent)}
+.sb-num{font-family:'JetBrains Mono',monospace;font-size:.65rem;background:var(--muted);color:#1f1f1e;border-radius:3px;padding:1px 5px;min-width:18px;text-align:center}
+.sb-link.active .sb-num{background:var(--accent)}
+.hero{background:var(--bg);border-bottom:1px solid var(--border);padding:3.5rem 2rem 2.5rem;text-align:center}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,3rem);color:#fff;letter-spacing:.01em;font-weight:700}
+.hero p{font-family:'Playfair Display',serif;font-style:italic;color:var(--muted);margin-top:.5rem;font-size:.92rem}
+.hero-tags{margin-top:1.2rem;display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center}
+.tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.2rem .55rem;border-radius:4px;background:rgba(88,166,255,.12);color:var(--accent3);border:1px solid rgba(88,166,255,.25)}
+.tag.red{background:rgba(247,129,102,.12);color:var(--accent);border-color:rgba(247,129,102,.25)}
+.tag.green{background:rgba(63,185,80,.12);color:var(--accent4);border-color:rgba(63,185,80,.25)}
+.tag.amber{background:rgba(210,153,34,.12);color:var(--accent2);border-color:rgba(210,153,34,.25)}
+.sec{max-width:900px;margin:0 auto;padding:3rem 1.5rem 2.5rem;border-bottom:1px solid var(--border)}
+.sec-tag{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.6rem}
+.sec h2{font-family:'Playfair Display',serif;font-size:1.45rem;letter-spacing:.01em;color:var(--text);margin-bottom:.8rem;font-weight:700}
+.sec-intro{color:var(--muted);margin-bottom:1.8rem;font-size:.97rem;line-height:1.75}
+.sub-h{font-family:'DM Sans',sans-serif;font-style:normal;font-size:1rem;font-weight:600;color:var(--accent3);margin:2rem 0 .8rem;padding-bottom:.3rem;border-bottom:1px solid var(--border)}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .55s,transform .55s}
+.reveal.show{opacity:1;transform:none}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1rem;margin:1rem 0}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;box-shadow:var(--card-glow)}
+.card.amber{border-color:rgba(210,153,34,.35);background:rgba(210,153,34,.06)}
+.card.blue{border-color:rgba(88,166,255,.35);background:rgba(88,166,255,.06)}
+.card.green{border-color:rgba(63,185,80,.35);background:rgba(63,185,80,.06)}
+.card.red{border-color:rgba(247,129,102,.35);background:rgba(247,129,102,.06)}
+.card-title{font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:700;margin-bottom:.4rem}
+.card.amber .card-title{color:var(--accent2)}
+.card.blue .card-title{color:var(--accent3)}
+.card.green .card-title{color:var(--accent4)}
+.card.red .card-title{color:var(--accent)}
+.card p{color:var(--muted);font-size:.87rem}
+.hl{background:rgba(88,166,255,.07);border:1px solid rgba(88,166,255,.25);border-radius:6px;padding:.9rem 1.1rem;margin:1rem 0;font-size:.92rem}
+.hl strong{color:var(--accent3)}
+.hl.warn{background:rgba(210,153,34,.07);border:1px solid rgba(210,153,34,.25)}
+.hl.warn strong{color:var(--accent2)}
+.hl.success{background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.25)}
+.hl.success strong{color:var(--accent4)}
+.hl.red{background:rgba(247,129,102,.07);border:1px solid rgba(247,129,102,.25)}
+.hl.red strong{color:var(--accent)}
+.callout{position:relative;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1rem .9rem;margin:1rem 0}
+.callout::before{content:attr(data-label);position:absolute;top:-.65rem;left:1rem;background:var(--bg2);padding:0 .4rem;font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent2);border:1px solid var(--border);border-radius:3px}
+.callout.blue::before{color:var(--accent3)}
+.callout.green::before{color:var(--accent4)}
+.callout.red::before{color:var(--accent)}
+.callout p{color:var(--muted);font-size:.9rem}
+.mb{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.2rem;margin:1rem 0;overflow-x:auto;font-size:.97rem}
+.code-block{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:1rem 0}
+.code-header{background:var(--bg2);border-bottom:1px solid var(--border);padding:.45rem .9rem;display:flex;justify-content:space-between;align-items:center}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--accent2)}
+.code-copy{background:none;border:1px solid var(--border);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:.65rem;padding:.15rem .5rem;border-radius:4px;cursor:pointer;transition:all .2s}
+.code-copy:hover{color:var(--accent3);border-color:var(--accent3)}
+.code-block pre{padding:1rem 1.1rem;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:.8rem;line-height:1.65;background:var(--bg2)}
+.kw{color:#f47067}.fn{color:#dcbdfb}.st{color:#96d0ff}.cm{color:#636e7b;font-style:italic}.nu{color:#6cb6ff}.cl{color:#f69d50}.id2{color:#57ab5a}
+.mat-wrap{display:flex;flex-wrap:wrap;gap:1.5rem;align-items:flex-start;margin:1rem 0}
+.mat{display:inline-block;background:var(--bg3);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.mat-row{display:flex}
+.mat-cell{min-width:52px;padding:.35rem .5rem;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.78rem;background:var(--bg3);border:1px solid var(--border);color:var(--muted)}
+.mat-cell.hl-cell{background:rgba(88,166,255,.18);color:var(--accent3)}
+.mat-cell.hl-cell2{background:rgba(63,185,80,.18);color:var(--accent4)}
+.mat-cell.hl-cell3{background:rgba(247,129,102,.18);color:var(--accent)}
+.mat-cell.hl-cell4{background:rgba(210,153,34,.18);color:var(--accent2)}
+.mat-label{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);margin-top:.4rem;text-align:center}
+.mat-op{font-size:1.3rem;color:var(--muted);align-self:center;padding:.5rem}
+.mat-eq{font-size:1.1rem;color:var(--accent2);align-self:center;padding:.3rem}
+.pipeline{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1rem 0}
+.pipe-box{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:.45rem .85rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--muted)}
+.pipe-box.accent{border-color:var(--accent);color:var(--accent);background:rgba(247,129,102,.08)}
+.pipe-box.blue{border-color:var(--accent3);color:var(--accent3);background:rgba(88,166,255,.08)}
+.pipe-box.green{border-color:var(--accent4);color:var(--accent4);background:rgba(63,185,80,.08)}
+.pipe-box.amber{border-color:var(--accent2);color:var(--accent2);background:rgba(210,153,34,.08)}
+.pipe-arrow{color:var(--muted);font-size:1rem}
+.step{display:none}.step.on{display:block}
+.step-ctrl{display:flex;align-items:center;gap:1rem;margin-top:.8rem}
+.btn{background:none;border:1px solid var(--border);color:var(--accent3);font-family:'JetBrains Mono',monospace;font-size:.75rem;padding:.3rem .8rem;border-radius:5px;cursor:pointer;transition:all .2s}
+.btn:hover{background:rgba(88,166,255,.1);border-color:var(--accent3)}
+.step-idx{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted)}
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.88rem}
+th{background:var(--bg2);color:var(--accent3);padding:.5rem .8rem;border:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:.75rem;text-align:left}
+td{background:var(--bg3);color:var(--muted);padding:.45rem .8rem;border:1px solid var(--border)}
+td.val{color:var(--text);font-weight:600}
+td.blue{color:var(--accent3)}
+td.green{color:var(--accent4)}
+td.amber{color:var(--accent2)}
+td.acc{color:var(--accent)}
+.diag-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:1rem 0;display:flex;justify-content:center;align-items:center;padding:.5rem}
+.norm-vis{display:flex;gap:.3rem;flex-wrap:wrap;margin:1rem 0;align-items:flex-end}
+.norm-bar{display:flex;flex-direction:column;align-items:center;gap:.3rem}
+.norm-val{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:.3rem .5rem;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--muted);min-width:52px;text-align:center}
+.norm-val.before{border-color:var(--accent);color:var(--accent)}
+.norm-val.after{border-color:var(--accent4);color:var(--accent4)}
+.norm-label{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--muted)}
+</style>
+</head>
+<body class="sidebar-open">
+<div id="prog"></div>
+
+<nav class="topnav">
+  <div class="nav-brand">LLM Architecture &amp; LayerNorm</div>
+  <button class="nav-toggle" onclick="toggleSidebar()" id="sb-btn">&#8249;&#8249;</button>
+  <div class="nav-scrolllinks">
+    <a href="#llm-arch">S17 LLM Arch</a>
+    <a href="#gpt-config">S18 GPT Config</a>
+    <a href="#layernorm-theory">S19 LayerNorm Theory</a>
+    <a href="#batch-vs-layer">S20 Batch vs Layer</a>
+    <a href="#layernorm-steps">S21 LayerNorm Steps</a>
+    <a href="#layernorm-pytorch">S22 LayerNorm PyTorch</a>
+    <a href="#summary">S23 Summary</a>
+  </div>
+</nav>
+
+<div id="sidebar" class="open">
+  <div class="sb-title">Deep Learning Notes</div>
+  <a class="sb-link" href="#llm-arch"><span class="sb-num">S17</span>LLM Architecture</a>
+  <a class="sb-link" href="#gpt-config"><span class="sb-num">S18</span>GPT-2 Config (124M)</a>
+  <a class="sb-link" href="#layernorm-theory"><span class="sb-num">S19</span>LayerNorm Theory</a>
+  <a class="sb-link" href="#batch-vs-layer"><span class="sb-num">S20</span>Batch vs Layer Norm</a>
+  <a class="sb-link" href="#layernorm-steps"><span class="sb-num">S21</span>LayerNorm Steps</a>
+  <a class="sb-link" href="#layernorm-pytorch"><span class="sb-num">S22</span>LayerNorm in PyTorch</a>
+  <a class="sb-link" href="#summary"><span class="sb-num">S23</span>Summary</a>
+</div>
+
+<div class="hero">
+  <h1>LLM Architecture &amp; Layer Normalization</h1>
+  <p>Transformer block internals, GPT-2 config, and why LayerNorm stabilizes deep network training</p>
+  <div class="hero-tags">
+    <span class="tag red">Transformer Block</span>
+    <span class="tag amber">GPT Config 124M</span>
+    <span class="tag">Layer Normalization</span>
+    <span class="tag green">Batch vs Layer Norm</span>
+    <span class="tag">Shortcut Connections</span>
+    <span class="tag amber">GELU Activation</span>
+    <span class="tag">Feed Forward Network</span>
+    <span class="tag green">PyTorch nn.Module</span>
+  </div>
+</div>
+
+<!-- ===== S17: LLM ARCHITECTURE ===== -->
+<section class="sec reveal" id="llm-arch">
+  <div class="sec-tag">S17 — LLM Architecture</div>
+  <h2>GPT-Style LLM Architecture Overview</h2>
+  <p class="sec-intro">
+    After understanding causal and multi-head attention, we now zoom out to see the full GPT-style LLM
+    architecture. The model consists of three major components: a token <strong>embedding layer</strong>,
+    a stack of <strong>transformer blocks</strong>, and a final <strong>output layer</strong>.
+    The transformer block itself contains masked multi-head attention, feed-forward network, layer norms,
+    dropout, and shortcut (residual) connections. The famous quote "every effort moves you forward" is
+    used as the running example sequence throughout GPT-from-scratch implementations.
+  </p>
+
+  <div class="sub-h">Top-Level Architecture</div>
+  <div class="diag-wrap">
+    <svg viewBox="0 0 520 420" width="520" height="420" xmlns="http://www.w3.org/2000/svg" style="max-width:100%">
+      <!-- tokenized text -->
+      <rect x="190" y="370" width="140" height="38" rx="6" fill="#2c2c2a" stroke="#3a3a37"/>
+      <text x="260" y="392" text-anchor="middle" fill="#8b949e" font-size="11" font-family="JetBrains Mono">tokenized text</text>
+      <!-- arrow up -->
+      <line x1="260" y1="370" x2="260" y2="345" stroke="#3a3a37" stroke-width="1.5" marker-end="url(#arru)"/>
+      <!-- Embedding layer -->
+      <rect x="175" y="305" width="170" height="38" rx="6" fill="#2c2c2a" stroke="#58a6ff"/>
+      <text x="260" y="328" text-anchor="middle" fill="#58a6ff" font-size="11" font-family="JetBrains Mono">Embedding Layer</text>
+      <!-- arrow up -->
+      <line x1="260" y1="305" x2="260" y2="280" stroke="#3a3a37" stroke-width="1.5" marker-end="url(#arru)"/>
+      <!-- Transformer block outer -->
+      <rect x="120" y="120" width="280" height="155" rx="8" fill="rgba(210,153,34,0.05)" stroke="#d29922" stroke-dasharray="5,3"/>
+      <text x="260" y="140" text-anchor="middle" fill="#d29922" font-size="10" font-family="JetBrains Mono">Transformer Block ×N</text>
+      <!-- masked multi head inside -->
+      <rect x="155" y="150" width="210" height="32" rx="5" fill="#2c2c2a" stroke="#f78166"/>
+      <text x="260" y="170" text-anchor="middle" fill="#f78166" font-size="10" font-family="JetBrains Mono">Masked Multi-Head Attention</text>
+      <!-- feed forward inside -->
+      <rect x="155" y="197" width="210" height="32" rx="5" fill="#2c2c2a" stroke="#3fb950"/>
+      <text x="260" y="217" text-anchor="middle" fill="#3fb950" font-size="10" font-family="JetBrains Mono">Feed Forward Network</text>
+      <!-- layer norms inside -->
+      <rect x="155" y="244" width="95" height="24" rx="4" fill="#2c2c2a" stroke="#58a6ff"/>
+      <text x="202" y="260" text-anchor="middle" fill="#58a6ff" font-size="9" font-family="JetBrains Mono">Layer Norm 1</text>
+      <rect x="270" y="244" width="95" height="24" rx="4" fill="#2c2c2a" stroke="#58a6ff"/>
+      <text x="317" y="260" text-anchor="middle" fill="#58a6ff" font-size="9" font-family="JetBrains Mono">Layer Norm 2</text>
+      <!-- arrow up from transformer to output -->
+      <line x1="260" y1="120" x2="260" y2="95" stroke="#3a3a37" stroke-width="1.5" marker-end="url(#arru)"/>
+      <!-- Output layer -->
+      <rect x="175" y="55" width="170" height="38" rx="6" fill="#2c2c2a" stroke="#f78166"/>
+      <text x="260" y="78" text-anchor="middle" fill="#f78166" font-size="11" font-family="JetBrains Mono">Output Layer</text>
+      <!-- shortcut arrows (residual) -->
+      <path d="M 118 200 Q 70 200 70 155 Q 70 140 118 140" stroke="#d29922" stroke-width="1.2" fill="none" stroke-dasharray="4,2" marker-end="url(#arry)"/>
+      <text x="52" y="172" fill="#d29922" font-size="8" font-family="JetBrains Mono" transform="rotate(-90,52,172)">Shortcut</text>
+      <!-- output label -->
+      <rect x="175" y="10" width="170" height="36" rx="5" fill="rgba(63,185,80,0.08)" stroke="#3fb950"/>
+      <text x="260" y="30" text-anchor="middle" fill="#3fb950" font-size="10" font-family="JetBrains Mono">[[0.43,...0.39],</text>
+      <text x="260" y="44" text-anchor="middle" fill="#8b949e" font-size="9" font-family="JetBrains Mono">same shape as input tokens</text>
+      <defs>
+        <marker id="arru" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L4,4 L8,0" fill="none" stroke="#3a3a37" stroke-width="1.5"/></marker>
+        <marker id="arry" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#d29922"/></marker>
+      </defs>
+    </svg>
+  </div>
+  <p style="color:var(--muted);font-size:.88rem;margin-top:.4rem">The output has the <strong>same form &amp; dimensions as inputs</strong>. Each row is a 768-dim vector representing an embedded input token. For "every effort moves you": 4 tokens → 4 output vectors.</p>
+
+  <div class="sub-h">Transformer Block — Detailed Internal View</div>
+  <p style="color:var(--muted);margin-bottom:.8rem">
+    The transformer block is a key component of GPT-like LLMs. Each block has two sub-layers
+    (attention + FFN), each preceded by a Layer Norm and followed by a Dropout + shortcut connection.
+    The shortcut connection adds the block's input directly to its output, helping gradients flow
+    backward through many layers.
+  </p>
+
+  <div class="diag-wrap">
+    <svg viewBox="0 0 620 520" width="620" height="520" xmlns="http://www.w3.org/2000/svg" style="max-width:100%">
+      <!-- Input at bottom -->
+      <text x="240" y="505" fill="#8b949e" font-size="10" font-family="JetBrains Mono" text-anchor="middle">x (input)</text>
+      <line x1="240" y1="494" x2="240" y2="478" stroke="#3a3a37" stroke-width="1.5"/>
+
+      <!-- Layer Norm 1 -->
+      <rect x="165" y="450" width="150" height="30" rx="5" fill="#2c2c2a" stroke="#58a6ff"/>
+      <text x="240" y="469" text-anchor="middle" fill="#58a6ff" font-size="10" font-family="JetBrains Mono">Layer Norm 1</text>
+      <line x1="240" y1="450" x2="240" y2="428" stroke="#3a3a37" stroke-width="1.5"/>
+
+      <!-- Masked Multi-Head Attention -->
+      <rect x="140" y="395" width="200" height="30" rx="5" fill="#2c2c2a" stroke="#f78166"/>
+      <text x="240" y="414" text-anchor="middle" fill="#f78166" font-size="10" font-family="JetBrains Mono">Masked Multi-Head Attn</text>
+      <line x1="240" y1="395" x2="240" y2="373" stroke="#3a3a37" stroke-width="1.5"/>
+
+      <!-- Dropout 1 -->
+      <rect x="185" y="345" width="110" height="25" rx="5" fill="#2c2c2a" stroke="#8b949e"/>
+      <text x="240" y="361" text-anchor="middle" fill="#8b949e" font-size="10" font-family="JetBrains Mono">Dropout</text>
+      <line x1="240" y1="345" x2="240" y2="325" stroke="#3a3a37" stroke-width="1.5"/>
+
+      <!-- Add (shortcut 1) -->
+      <circle cx="240" cy="315" r="12" fill="#2c2c2a" stroke="#d29922" stroke-width="1.5"/>
+      <text x="240" y="320" text-anchor="middle" fill="#d29922" font-size="14" font-family="JetBrains Mono">+</text>
+      <line x1="240" y1="303" x2="240" y2="283" stroke="#3a3a37" stroke-width="1.5"/>
+
+      <!-- Shortcut 1 path -->
+      <path d="M 240 478 L 135 478 L 135 315" stroke="#d29922" stroke-width="1.2" fill="none" stroke-dasharray="4,2"/>
+      <line x1="135" y1="315" x2="228" y2="315" stroke="#d29922" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrd)"/>
+
+      <!-- Layer Norm 2 -->
+      <rect x="165" y="254" width="150" height="30" rx="5" fill="#2c2c2a" stroke="#58a6ff"/>
+      <text x="240" y="273" text-anchor="middle" fill="#58a6ff" font-size="10" font-family="JetBrains Mono">Layer Norm 2</text>
+      <line x1="240" y1="254" x2="240" y2="232" stroke="#3a3a37" stroke-width="1.5"/>
+
+      <!-- Feed Forward -->
+      <rect x="155" y="200" width="170" height="30" rx="5" fill="#2c2c2a" stroke="#3fb950"/>
+      <text x="240" y="219" text-anchor="middle" fill="#3fb950" font-size="10" font-family="JetBrains Mono">Feed Forward Network</text>
+      <line x1="240" y1="200" x2="240" y2="178" stroke="#3a3a37" stroke-width="1.5"/>
+
+      <!-- Dropout 2 -->
+      <rect x="185" y="150" width="110" height="25" rx="5" fill="#2c2c2a" stroke="#8b949e"/>
+      <text x="240" y="166" text-anchor="middle" fill="#8b949e" font-size="10" font-family="JetBrains Mono">Dropout</text>
+      <line x1="240" y1="150" x2="240" y2="130" stroke="#3a3a37" stroke-width="1.5"/>
+
+      <!-- Add (shortcut 2) -->
+      <circle cx="240" cy="120" r="12" fill="#2c2c2a" stroke="#d29922" stroke-width="1.5"/>
+      <text x="240" y="125" text-anchor="middle" fill="#d29922" font-size="14" font-family="JetBrains Mono">+</text>
+      <line x1="240" y1="108" x2="240" y2="85" stroke="#3a3a37" stroke-width="1.5"/>
+
+      <!-- Shortcut 2 path -->
+      <path d="M 240 283 L 130 283 L 130 120" stroke="#d29922" stroke-width="1.2" fill="none" stroke-dasharray="4,2"/>
+      <line x1="130" y1="120" x2="228" y2="120" stroke="#d29922" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrd)"/>
+
+      <!-- Output top -->
+      <rect x="175" y="52" width="130" height="30" rx="5" fill="rgba(63,185,80,0.1)" stroke="#3fb950"/>
+      <text x="240" y="71" text-anchor="middle" fill="#3fb950" font-size="10" font-family="JetBrains Mono">output z</text>
+
+      <!-- Feed Forward zoom box -->
+      <rect x="420" y="185" width="170" height="110" rx="6" fill="#2c2c2a" stroke="#3a3a37"/>
+      <text x="505" y="202" text-anchor="middle" fill="#d29922" font-size="9" font-family="JetBrains Mono">Feed Forward Block</text>
+      <rect x="440" y="210" width="130" height="22" rx="4" fill="#121212" stroke="#3a3a37"/>
+      <text x="505" y="225" text-anchor="middle" fill="#8b949e" font-size="9" font-family="JetBrains Mono">Linear Layer (4×d)</text>
+      <line x1="505" y1="232" x2="505" y2="240" stroke="#3a3a37" stroke-width="1"/>
+      <rect x="440" y="240" width="130" height="22" rx="4" fill="#121212" stroke="#d29922"/>
+      <text x="505" y="255" text-anchor="middle" fill="#d29922" font-size="9" font-family="JetBrains Mono">GELU Activation</text>
+      <line x1="505" y1="262" x2="505" y2="270" stroke="#3a3a37" stroke-width="1"/>
+      <rect x="440" y="270" width="130" height="22" rx="4" fill="#121212" stroke="#3a3a37"/>
+      <text x="505" y="285" text-anchor="middle" fill="#8b949e" font-size="9" font-family="JetBrains Mono">Linear Layer (d back)</text>
+      <line x1="350" y1="215" x2="440" y2="235" stroke="#3a3a37" stroke-width="1" stroke-dasharray="3,2"/>
+
+      <!-- Shortcut label -->
+      <text x="90" y="415" fill="#d29922" font-size="9" font-family="JetBrains Mono">Shortcut</text>
+      <text x="90" y="427" fill="#d29922" font-size="9" font-family="JetBrains Mono">connection</text>
+
+      <defs>
+        <marker id="arrd" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#d29922"/></marker>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="sub-h">Component Summary</div>
+  <div class="card-grid">
+    <div class="card blue">
+      <div class="card-title">Layer Norm 1 &amp; 2</div>
+      <p>Applied <em>before</em> each sub-layer (pre-norm style in GPT-2). Normalizes activations across the feature dimension, stabilizing gradient flow.</p>
+    </div>
+    <div class="card red">
+      <div class="card-title">Masked Multi-Head Attn</div>
+      <p>Causal self-attention from S9–S15. Computes contextual representations with lower-triangular mask enforcing autoregressive constraint.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Feed Forward Network</div>
+      <p>Two linear layers with GELU activation between them. Expands to $4 \times d_{\text{model}}$ then projects back. Applies position-wise to each token independently.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">Shortcut Connections</div>
+      <p>Residual / skip connections: add block input directly to block output. Prevents vanishing gradients in deep stacks (N=12 for GPT-2).</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Input/Output Token Vectors</div>
+  <p style="color:var(--muted);margin-bottom:.8rem">For the example sentence "every effort moves you" with <code>d_model=768</code>:</p>
+  <div class="mb">
+    $$\text{Input:} \quad X \in \mathbb{R}^{4 \times 768}$$
+    $$X = \begin{bmatrix}
+      0.22 & 0.34 & \cdots & 0.46 \\
+      0.22 & \cdots & \cdots & 0.75 \\
+      0.69 & \cdots & \cdots & 0.69 \\
+      0.08 & \cdots & \cdots & 0.58
+    \end{bmatrix}
+    \leftarrow
+    \begin{array}{l}
+      \text{"every"} \\ \text{"effort"} \\ \text{"moves"} \\ \text{"you"}
+    \end{array}$$
+    $$\text{Output:} \quad Z \in \mathbb{R}^{4 \times 768} \quad \text{(same shape — critical property)}$$
+    $$Z = \begin{bmatrix}
+      0.43 & \cdots & 0.39 \\ -0.1 & \cdots & 3.65 \\ 0.4 & \cdots & 0.73 \\ 0.07 & \cdots & 0.71
+    \end{bmatrix}$$
+  </div>
+
+  <div class="sub-h">Mental Model for Coding GPT Architecture</div>
+  <div class="pipeline">
+    <div class="pipe-box blue">① GPT backbone</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">② Layer Norm</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">③ GELU</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">④ FFN</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">⑤ Shortcut</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box accent">⑥ Transformer block</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">⑦ Final GPT arch</div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Skeleton GPT transformer block structure</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+<span class="kw">class</span> <span class="cl">TransformerBlock</span>(nn.<span class="cl">Module</span>):
+    <span class="cm">"""
+    concept: one GPT-style transformer block with pre-norm and residual connections.
+    x_in   : input activations [batch, T, d_model]
+    x_out  : output activations [batch, T, d_model]  -- SAME SHAPE as input
+    norm1  : LayerNorm before attention sub-layer
+    norm2  : LayerNorm before feed-forward sub-layer
+    drop   : dropout applied after each sub-layer
+    Shortcut (residual): x_out = x_in + sublayer(norm(x_in))
+    Time: O(T^2 * d) for attention, O(T*d^2) for FFN | Space: O(T^2 + T*d)
+    dry run: x[b,T,d] → norm1 → attn → drop → +x → norm2 → ffn → drop → +prev → z[b,T,d]
+    """</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="id2">self</span>, d_model, n_heads, context_length, drop_rate):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="id2">self</span>.norm1 = nn.<span class="cl">LayerNorm</span>(d_model)
+        <span class="id2">self</span>.attn  = <span class="cl">MultiHeadAttention</span>(d_model, n_heads, context_length, drop_rate)
+        <span class="id2">self</span>.norm2 = nn.<span class="cl">LayerNorm</span>(d_model)
+        <span class="id2">self</span>.ffn   = <span class="cl">FeedForward</span>(d_model)
+        <span class="id2">self</span>.drop  = nn.<span class="cl">Dropout</span>(drop_rate)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="id2">self</span>, x):
+        <span class="cm"># Attention sub-layer with pre-norm + residual</span>
+        residual = x                             <span class="cm"># [b, T, d]  -- save for shortcut</span>
+        x = <span class="id2">self</span>.<span class="fn">norm1</span>(x)                        <span class="cm"># [b, T, d]  -- normalize features</span>
+        x = <span class="id2">self</span>.<span class="fn">attn</span>(x)                         <span class="cm"># [b, T, d]  -- contextual mixing</span>
+        x = <span class="id2">self</span>.<span class="fn">drop</span>(x)                         <span class="cm"># [b, T, d]  -- regularization</span>
+        x = x + residual                         <span class="cm"># [b, T, d]  -- shortcut 1</span>
+
+        <span class="cm"># Feed-forward sub-layer with pre-norm + residual</span>
+        residual = x                             <span class="cm"># [b, T, d]  -- save for shortcut 2</span>
+        x = <span class="id2">self</span>.<span class="fn">norm2</span>(x)                        <span class="cm"># [b, T, d]  -- normalize</span>
+        x = <span class="id2">self</span>.<span class="fn">ffn</span>(x)                          <span class="cm"># [b, T, d]  -- position-wise transform</span>
+        x = <span class="id2">self</span>.<span class="fn">drop</span>(x)                         <span class="cm"># [b, T, d]  -- regularization</span>
+        x = x + residual                         <span class="cm"># [b, T, d]  -- shortcut 2</span>
+        <span class="kw">return</span> x  <span class="cm"># same shape [b, T, d] as input</span></pre>
+  </div>
+
+  <div class="hl success"><strong>Key Property:</strong> Every transformer block preserves the tensor shape $[b, T, d_{\text{model}}]$. This is why you can stack $N$ blocks sequentially — each accepts and returns the same shape. Shortcut connections ensure gradients propagate directly to early layers, bypassing $N$ matrix multiplications.</div>
+</section>
+
+<!-- ===== S18: GPT CONFIG 124M ===== -->
+<section class="sec reveal" id="gpt-config">
+  <div class="sec-tag">S18 — GPT Config 124M</div>
+  <h2>GPT-2 Configuration: 124 Million Parameters</h2>
+  <p class="sec-intro">
+    We now scale up to a small GPT model with 124 million parameters — matching the publicly released
+    GPT-2 weights from OpenAI. GPT-3 and GPT-4 weights have not been released; we use GPT-2's
+    checkpoint as our reference. Every hyperparameter below is grounded in the original GPT-2 paper.
+    Understanding this config is essential because it defines the shape of every tensor in the architecture.
+  </p>
+
+  <div class="sub-h">GPT_CONFIG_124M — All Hyperparameters</div>
+  <div class="mb">
+    $$\texttt{GPT\_CONFIG\_124M} = \{$$
+    $$\quad \texttt{vocab\_size}: 50{,}257 \quad\text{(BPE vocabulary, byte-pair encoding)}$$
+    $$\quad \texttt{context\_length}: 1{,}024 \quad\text{(max tokens in input sequence)}$$
+    $$\quad \texttt{emb\_dim}: 768 \quad\text{(embedding / model dimension } d_{\text{model}}\text{)}$$
+    $$\quad \texttt{n\_heads}: 12 \quad\text{(attention heads per transformer block)}$$
+    $$\quad \texttt{n\_layers}: 12 \quad\text{(number of stacked transformer blocks)}$$
+    $$\quad \texttt{drop\_rate}: 0.1 \quad\text{(dropout probability, 10\%)}$$
+    $$\quad \texttt{qkv\_bias}: \text{False} \quad\text{(no bias in QKV projections)}$$
+    $$\}$$
+  </div>
+
+  <div class="sub-h">What Each Parameter Means</div>
+  <table>
+    <tr><th>Parameter</th><th>Value</th><th>Meaning</th></tr>
+    <tr><td class="val">vocab_size</td><td class="amber">50,257</td><td>Every token maps to one of 50,257 BPE token IDs. Embedding table: $W_E \in \mathbb{R}^{50257 \times 768}$</td></tr>
+    <tr><td class="val">context_length</td><td class="amber">1,024</td><td>Max words (tokens) used to predict the next word. Positional embedding table: $W_P \in \mathbb{R}^{1024 \times 768}$</td></tr>
+    <tr><td class="val">emb_dim</td><td class="blue">768</td><td>Every token is embedded into a 768-dimensional vector. This is $d_{\text{model}}$ throughout the network.</td></tr>
+    <tr><td class="val">n_heads</td><td class="blue">12</td><td>Multi-head attention splits 768-dim into 12 heads. Each head dimension: $d_k = 768/12 = 64$</td></tr>
+    <tr><td class="val">n_layers</td><td class="green">12</td><td>Number of stacked transformer blocks. More layers = more abstraction levels learned.</td></tr>
+    <tr><td class="val">drop_rate</td><td class="green">0.1</td><td>10% of activations randomly zeroed during training. Prevents overfitting.</td></tr>
+    <tr><td class="val">qkv_bias</td><td class="acc">False</td><td>No additive bias in Q/K/V projection matrices. Standard in GPT-2 (saves parameters).</td></tr>
+  </table>
+
+  <div class="sub-h">Parameter Count Derivation: Why 124M?</div>
+  <div class="mb">
+    $$\text{Embedding tables:} \quad W_E: 50257 \times 768 = 38{,}597{,}376$$
+    $$\quad\quad\quad\quad\quad W_P: 1024 \times 768 = 786{,}432$$
+    $$\text{Per transformer block:}$$
+    $$\quad W_Q, W_K, W_V, W_O: 4 \times (768 \times 768) = 2{,}359{,}296$$
+    $$\quad \text{FFN: } 768 \times 3072 + 3072 \times 768 = 4{,}718{,}592 \quad (4 \times d_{\text{model}})$$
+    $$\quad \text{LayerNorms} \times 2: \approx 3{,}072 \quad (\gamma, \beta \text{ each size } 768)$$
+    $$\text{Total per block} \approx 7{,}077{,}888$$
+    $$\text{All 12 blocks: } 12 \times 7{,}077{,}888 = 84{,}934{,}656$$
+    $$\text{Output head (unembedding):} 768 \times 50257 = 38{,}597{,}376$$
+    $$\boxed{\text{Total} \approx 124{,}439{,}808 \approx 124\text{M parameters}}$$
+  </div>
+
+  <div class="sub-h">Context Length — What It Means</div>
+  <div class="callout amber" data-label="Context Length">
+    <p><strong>Q: What is context length?</strong> It is the maximum number of tokens (words/subwords) the model
+    uses to predict the next token. With <code>context_length=1024</code>, when predicting token $t_{1025}$,
+    the model can see at most tokens $t_1, t_2, \ldots, t_{1024}$. This is the "window" of memory. Modern
+    models have much larger context windows: GPT-4 has 128K, Claude has 200K.</p>
+    <p style="margin-top:.6rem">Every token has a 768-dim embedding vector. The vocabulary of 50,257 tokens
+    covers English text comprehensively — each unique word (or sub-word) gets a distinct vector in $\mathbb{R}^{768}$.</p>
+  </div>
+
+  <div class="sub-h">Head Dimension Calculation</div>
+  <div class="mb">
+    $$\text{head\_dim} = d_k = \frac{d_{\text{model}}}{\text{n\_heads}} = \frac{768}{12} = 64$$
+    $$\text{Each of the 12 heads computes attention in a 64-dim subspace}$$
+    $$Q_i, K_i, V_i \in \mathbb{R}^{T \times 64}, \quad i = 1, 2, \ldots, 12$$
+    $$\text{Scale factor:} \quad \frac{1}{\sqrt{d_k}} = \frac{1}{\sqrt{64}} = \frac{1}{8} = 0.125$$
+  </div>
+
+  <div class="sub-h">Purpose of This Config</div>
+  <div class="hl warn"><strong>Bird's Eye View:</strong> Using this config, we will build a <em>Dummy GPT Model</em> (placeholder architecture) first — this gives a bird's-eye view of how all components fit together before filling in the actual forward pass logic. The dummy model instantiates all layers with correct shapes but may use identity or random forward passes initially.</div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — GPT-2 124M configuration dict and shape verification</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+<span class="cm"># concept: GPT-2 small configuration — all hyperparameters in one dict</span>
+<span class="cm"># vocab_size   : number of unique BPE token IDs
+# context_length: max tokens per input sequence (positional embedding size)
+# emb_dim      : d_model — every token and position vector dimension
+# n_heads      : number of parallel attention heads per block
+# n_layers     : number of stacked transformer blocks
+# drop_rate    : fraction of activations zeroed during training
+# qkv_bias     : whether to add bias to Q,K,V projection matrices</span>
+
+GPT_CONFIG_124M = {
+    <span class="st">'vocab_size'</span>:      <span class="nu">50257</span>,
+    <span class="st">'context_length'</span>:  <span class="nu">1024</span>,
+    <span class="st">'emb_dim'</span>:         <span class="nu">768</span>,
+    <span class="st">'n_heads'</span>:         <span class="nu">12</span>,
+    <span class="st">'n_layers'</span>:        <span class="nu">12</span>,
+    <span class="st">'drop_rate'</span>:       <span class="nu">0.1</span>,
+    <span class="st">'qkv_bias'</span>:        <span class="kw">False</span>,
+}
+
+cfg = GPT_CONFIG_124M
+
+<span class="cm"># Verify key derived dimensions</span>
+head_dim = cfg[<span class="st">'emb_dim'</span>] // cfg[<span class="st">'n_heads'</span>]   <span class="cm"># 768 // 12 = 64</span>
+scale    = head_dim ** <span class="nu">-0.5</span>                    <span class="cm"># 1/sqrt(64) = 0.125</span>
+ffn_dim  = cfg[<span class="st">'emb_dim'</span>] * <span class="nu">4</span>                  <span class="cm"># 768 * 4 = 3072 (FFN hidden)</span>
+
+<span class="fn">print</span>(<span class="st">"head_dim:"</span>,   head_dim)   <span class="cm"># 64</span>
+<span class="fn">print</span>(<span class="st">"attn scale:"</span>, scale)     <span class="cm"># 0.125</span>
+<span class="fn">print</span>(<span class="st">"ffn hidden:"</span>, ffn_dim)   <span class="cm"># 3072</span>
+
+<span class="cm"># Approximate parameter count</span>
+emb_params    = cfg[<span class="st">'vocab_size'</span>] * cfg[<span class="st">'emb_dim'</span>]          <span class="cm"># 38.6M</span>
+pos_params    = cfg[<span class="st">'context_length'</span>] * cfg[<span class="st">'emb_dim'</span>]       <span class="cm"># 0.79M</span>
+d = cfg[<span class="st">'emb_dim'</span>]
+attn_per_block = <span class="nu">4</span> * d * d                                    <span class="cm"># W_Q,K,V,O: 2.36M</span>
+ffn_per_block  = <span class="nu">2</span> * d * ffn_dim                              <span class="cm"># 4.72M</span>
+total_blocks   = cfg[<span class="st">'n_layers'</span>] * (attn_per_block + ffn_per_block)
+total_approx   = emb_params + pos_params + total_blocks + emb_params
+<span class="fn">print</span>(<span class="st">"approx params:"</span>, total_approx)   <span class="cm"># ~124M</span>
+<span class="cm"># Time: O(n_layers * T^2 * d) for forward pass | Space: O(n_layers * T * d)</span></pre>
+  </div>
+
+  <div class="hl success"><strong>Key Numbers to Remember:</strong> vocab=50K, ctx=1024, d=768, heads=12, layers=12, head_dim=64, scale=0.125, FFN_hidden=3072. Every tensor shape in GPT-2 derives from these seven numbers.</div>
+</section>
+
+<!-- ===== S19: LAYER NORM THEORY ===== -->
+<section class="sec reveal" id="layernorm-theory">
+  <div class="sec-tag">S19 — Layer Normalization Theory</div>
+  <h2>Layer Normalization: Theory &amp; Motivation</h2>
+  <p class="sec-intro">
+    Training deep neural networks with many layers is challenging due to <strong>vanishing and exploding
+    gradients</strong>. Layer Normalization is a technique that normalizes activations across the feature
+    dimension for each individual training example — independent of batch size — making it ideal for
+    transformer architectures. It <em>improves training stability</em> and <em>enhances efficiency</em>
+    by keeping gradients well-structured throughout training.
+  </p>
+
+  <div class="sub-h">① Vanishing &amp; Exploding Gradient Problem</div>
+  <div class="card-grid">
+    <div class="card red">
+      <div class="card-title">Vanishing Gradient</div>
+      <p>Gradients shrink as they are propagated backward through layers. Weight updates become extremely small. The model learns very slowly or <strong>stops learning entirely</strong>.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-title">Exploding Gradient</div>
+      <p>Gradients grow exponentially as they move backward. Causes very large weight updates. The model becomes unstable and <strong>diverges during training</strong>.</p>
+    </div>
+    <div class="card blue">
+      <div class="card-title">Root Cause</div>
+      <p>When training, the input to each layer changes as parameters of earlier layers update. This shift in distribution is called <strong>internal covariate shift</strong>.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">Consequence</div>
+      <p>Unstable training dynamics, very slow convergence, model fails to generalize, loss function does not reduce properly. Requires careful initialization &amp; small learning rates.</p>
+    </div>
+  </div>
+
+  <div class="sub-h">Internal Covariate Shift</div>
+  <div class="callout amber" data-label="Definition">
+    <p><strong>Internal Covariate Shift:</strong> During training, the input to each layer changes as parameters of earlier layers update. This shift in distribution is called internal covariate shift.
+    It slows down convergence, makes optimization more difficult, and requires smaller learning rates or careful initialization to compensate.</p>
+  </div>
+
+  <div class="sub-h">Why LayerNorm Fixes This</div>
+  <div class="mb">
+    $$\text{Without normalization: activations } \mu \approx 0.13,\; \sigma^2 \approx 0.39 \text{ (drifting, uncontrolled)}$$
+    $$\text{After LayerNorm: activations } \mu = 0.00,\; \sigma^2 = 1.00 \text{ (zero mean, unit variance)}$$
+    $$\text{This is called \textbf{zero-mean and unit-variance normalization}}$$
+  </div>
+
+  <div class="sub-h">LayerNorm Visualization — Before vs After</div>
+  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin:1rem 0">
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent);margin-bottom:.4rem">Before LayerNorm (Layer input)</div>
+      <div style="display:flex;gap:.4rem">
+        <div style="background:var(--bg2);border:1px solid var(--accent);border-radius:4px;padding:.35rem .55rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent)">0.11</div>
+        <div style="background:var(--bg2);border:1px solid var(--accent);border-radius:4px;padding:.35rem .55rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent)">0.12</div>
+        <div style="background:var(--bg2);border:1px solid var(--accent);border-radius:4px;padding:.35rem .55rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent)">-0.36</div>
+        <div style="background:var(--bg2);border:1px solid var(--muted);border-radius:4px;padding:.35rem .55rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--muted)">xₙ</div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted);margin-top:.3rem">μ = 0.13,  σ² = 0.39</div>
+    </div>
+    <div style="align-self:center;font-size:1.5rem;color:var(--muted)">→</div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:.6rem .9rem">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent3);margin-bottom:.3rem">Apply Layer Normalization</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--muted)">$$\hat{x}_i = \frac{x_i - \mu}{\sqrt{\sigma^2 + \epsilon}}$$</div>
+    </div>
+    <div style="align-self:center;font-size:1.5rem;color:var(--muted)">→</div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent4);margin-bottom:.4rem">After LayerNorm (Layer output)</div>
+      <div style="display:flex;gap:.4rem">
+        <div style="background:var(--bg2);border:1px solid var(--accent4);border-radius:4px;padding:.35rem .55rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent4)">0.61</div>
+        <div style="background:var(--bg2);border:1px solid var(--accent4);border-radius:4px;padding:.35rem .55rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent4)">1.41</div>
+        <div style="background:var(--bg2);border:1px solid var(--accent4);border-radius:4px;padding:.35rem .55rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent4)">-0.87</div>
+        <div style="background:var(--bg2);border:1px solid var(--accent4);border-radius:4px;padding:.35rem .55rem;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--accent4)">0.58</div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted);margin-top:.3rem">μ = 0.00,  σ² = 1.00</div>
+    </div>
+  </div>
+
+  <div class="sub-h">What LayerNorm Does — Three Benefits</div>
+  <div class="mb">
+    $$\text{1. Improves training stability: keeps gradients well-structured} \Rightarrow \text{no vanishing/exploding}$$
+    $$\text{2. Enhances efficiency: allows network to train faster} \Rightarrow \text{higher learning rates possible}$$
+    $$\text{3. Evades internal covariate shift: normalizes input distributions across layers}$$
+    $$\text{Key: normalization is applied per sample, across features (not across batch)}$$
+  </div>
+
+  <div class="sub-h">Neural Network Gradient Flow with LayerNorm</div>
+  <div class="diag-wrap">
+    <svg viewBox="0 0 560 200" width="560" height="200" xmlns="http://www.w3.org/2000/svg" style="max-width:100%">
+      <!-- 3 layers of neurons -->
+      <!-- Layer 1 -->
+      <circle cx="80"  cy="60"  r="18" fill="#2c2c2a" stroke="#58a6ff" stroke-width="1.5"/>
+      <circle cx="80"  cy="100" r="18" fill="#2c2c2a" stroke="#58a6ff" stroke-width="1.5"/>
+      <circle cx="80"  cy="140" r="18" fill="#2c2c2a" stroke="#58a6ff" stroke-width="1.5"/>
+      <!-- Layer 2 -->
+      <circle cx="200" cy="70"  r="18" fill="#2c2c2a" stroke="#3fb950" stroke-width="1.5"/>
+      <circle cx="200" cy="110" r="18" fill="#2c2c2a" stroke="#3fb950" stroke-width="1.5"/>
+      <circle cx="200" cy="150" r="18" fill="#2c2c2a" stroke="#3fb950" stroke-width="1.5"/>
+      <!-- Layer 3 -->
+      <circle cx="320" cy="60"  r="18" fill="#2c2c2a" stroke="#d29922" stroke-width="1.5"/>
+      <circle cx="320" cy="100" r="18" fill="#2c2c2a" stroke="#d29922" stroke-width="1.5"/>
+      <circle cx="320" cy="140" r="18" fill="#2c2c2a" stroke="#d29922" stroke-width="1.5"/>
+      <!-- Connections layer 1 → 2 -->
+      <line x1="98" y1="60"  x2="182" y2="70"  stroke="#3a3a37" stroke-width=".8"/>
+      <line x1="98" y1="60"  x2="182" y2="110" stroke="#3a3a37" stroke-width=".8"/>
+      <line x1="98" y1="100" x2="182" y2="70"  stroke="#3a3a37" stroke-width=".8"/>
+      <line x1="98" y1="100" x2="182" y2="110" stroke="#3a3a37" stroke-width=".8"/>
+      <line x1="98" y1="100" x2="182" y2="150" stroke="#3a3a37" stroke-width=".8"/>
+      <line x1="98" y1="140" x2="182" y2="110" stroke="#3a3a37" stroke-width=".8"/>
+      <line x1="98" y1="140" x2="182" y2="150" stroke="#3a3a37" stroke-width=".8"/>
+      <!-- Connections layer 2 → 3 -->
+      <line x1="218" y1="70"  x2="302" y2="60"  stroke="#3a3a37" stroke-width=".8"/>
+      <line x1="218" y1="70"  x2="302" y2="100" stroke="#3a3a37" stroke-width=".8"/>
+      <line x1="218" y1="110" x2="302" y2="60"  stroke="#3a3a37" stroke-width=".8"/>
+      <line x1="218" y1="110" x2="302" y2="100" stroke="#3a3a37" stroke-width=".8"/>
+      <line x1="218" y1="110" x2="302" y2="140" stroke="#3a3a37" stroke-width=".8"/>
+      <line x1="218" y1="150" x2="302" y2="100" stroke="#3a3a37" stroke-width=".8"/>
+      <line x1="218" y1="150" x2="302" y2="140" stroke="#3a3a37" stroke-width=".8"/>
+      <!-- Backprop arrow -->
+      <path d="M 340 100 Q 420 100 420 100" stroke="#f78166" stroke-width="2" fill="none"/>
+      <text x="365" y="90" fill="#f78166" font-size="9" font-family="JetBrains Mono">gradient</text>
+      <text x="365" y="115" fill="#f78166" font-size="9" font-family="JetBrains Mono">updates</text>
+      <text x="350" y="165" fill="#8b949e" font-size="9" font-family="JetBrains Mono">← Backprop</text>
+      <!-- Gradient values -->
+      <text x="420" y="55"  fill="#8b949e" font-size="9" font-family="JetBrains Mono">gradient</text>
+      <text x="420" y="72"  fill="#8b949e" font-size="9" font-family="JetBrains Mono">quality</text>
+      <text x="420" y="90"  fill="#3fb950" font-size="9" font-family="JetBrains Mono">↑ gradient</text>
+      <text x="420" y="110" fill="#3fb950" font-size="9" font-family="JetBrains Mono">↑ factop</text>
+    </svg>
+  </div>
+
+  <div class="hl warn"><strong>Where LayerNorm is Applied in GPT-2:</strong> LayerNorm is applied <strong>before</strong> the attention and feed-forward sub-layers (pre-norm style), and also before the final output projection. This is the "Pre-LN" variant used in GPT-2 — earlier GPT-1 used post-norm (after each sub-layer), which is less stable for very deep networks.</div>
+</section>
+
+<!-- ===== S20: BATCH VS LAYER NORM ===== -->
+<section class="sec reveal" id="batch-vs-layer">
+  <div class="sec-tag">S20 — Batch Normalization vs Layer Normalization</div>
+  <h2>Batch Normalization vs Layer Normalization</h2>
+  <p class="sec-intro">
+    Two dominant normalization strategies exist: <strong>Batch Normalization</strong> (BatchNorm) normalizes
+    across the batch dimension for each feature, and <strong>Layer Normalization</strong> (LayerNorm) normalizes
+    across the feature dimension for each individual sample. For transformers and GPT models, <em>LayerNorm
+    is always preferred</em> — it is independent of batch size and works correctly with the variable-length,
+    autoregressive nature of language model training.
+  </p>
+
+  <div class="sub-h">a) Batch Normalization</div>
+  <div class="callout amber" data-label="BatchNorm">
+    <p><strong>Definition:</strong> Normalizes each feature value <em>across the batch dimension</em>, computing
+    mean and variance from the entire batch for each feature separately.
+    Given batch $\mathcal{B} = \{x^{(1)}, x^{(2)}, \ldots, x^{(m)}\}$ with $m$ samples:</p>
+  </div>
+  <div class="mb">
+    $$\mu_j = \frac{1}{m} \sum_{i=1}^{m} x_j^{(i)} \quad \text{(mean of feature } j \text{ across batch)}$$
+    $$\sigma_j^2 = \frac{1}{m} \sum_{i=1}^{m} (x_j^{(i)} - \mu_j)^2 \quad \text{(variance of feature } j\text{)}$$
+    $$\hat{x}_j^{(i)} = \frac{x_j^{(i)} - \mu_j}{\sqrt{\sigma_j^2 + \epsilon}}$$
+    $$y_j^{(i)} = \gamma_j \hat{x}_j^{(i)} + \beta_j \quad (\gamma_j, \beta_j \text{ learnable per feature})$$
+  </div>
+
+  <div class="callout blue" data-label="When to use BatchNorm">
+    <p>Works well with <strong>large batch sizes</strong> but can be unstable with small batch sizes.
+    Commonly used in CNNs (convolutional neural networks) for image tasks.
+    At inference, uses running mean/variance computed during training.</p>
+  </div>
+
+  <div class="sub-h">b) Layer Normalization</div>
+  <div class="callout green" data-label="LayerNorm">
+    <p><strong>Definition:</strong> Normalizes each feature value of an <em>individual data sample independently</em>.
+    For one sample $x = [x_1, x_2, \ldots, x_n]$ with $n$ features:</p>
+  </div>
+  <div class="mb">
+    $$\mu = \frac{1}{n} \sum_{i=1}^{n} x_i \quad \text{(mean across features of THIS sample)}$$
+    $$\sigma^2 = \frac{1}{n} \sum_{i=1}^{n} (x_i - \mu)^2 \quad \text{(variance across features of THIS sample)}$$
+    $$\hat{x}_i = \frac{x_i - \mu}{\sqrt{\sigma^2 + \epsilon}} \quad \epsilon = 10^{-5} = 0.00001$$
+    $$y_i = \gamma \hat{x}_i + \beta \quad (\gamma, \beta \in \mathbb{R}^n \text{ learnable, one pair per feature dim})$$
+  </div>
+
+  <div class="callout blue" data-label="Why LayerNorm for Transformers">
+    <p>Does <strong>not depend on batch size or sequence length</strong>. Transformers and GPT models often use
+    small batches and autoregressive training (each token is generated one at a time). LayerNorm handles
+    this naturally since each sample is normalized independently. The statistics $\mu, \sigma^2$ are
+    computed fresh for each sample at both train and inference time.</p>
+  </div>
+
+  <div class="sub-h">Side-by-Side Diagram: What Gets Normalized</div>
+  <div class="diag-wrap">
+    <svg viewBox="0 0 680 280" width="680" height="280" xmlns="http://www.w3.org/2000/svg" style="max-width:100%">
+      <!-- BATCH NORM side -->
+      <text x="130" y="22" text-anchor="middle" fill="#d29922" font-size="12" font-family="JetBrains Mono" font-weight="700">Batch Normalization</text>
+      <!-- Grid: rows=samples, cols=features -->
+      <!-- Headers -->
+      <text x="52"  y="40" fill="#8b949e" font-size="9" font-family="JetBrains Mono" text-anchor="middle">f₁</text>
+      <text x="92"  y="40" fill="#8b949e" font-size="9" font-family="JetBrains Mono" text-anchor="middle">f₂</text>
+      <text x="132" y="40" fill="#8b949e" font-size="9" font-family="JetBrains Mono" text-anchor="middle">f₃</text>
+      <text x="172" y="40" fill="#8b949e" font-size="9" font-family="JetBrains Mono" text-anchor="middle">f₄</text>
+      <!-- Rows for samples x1..x5 -->
+      <text x="18" y="62" fill="#8b949e" font-size="9" font-family="JetBrains Mono">x1</text>
+      <text x="18" y="97" fill="#8b949e" font-size="9" font-family="JetBrains Mono">x2</text>
+      <text x="18" y="132" fill="#8b949e" font-size="9" font-family="JetBrains Mono">x3</text>
+      <text x="18" y="167" fill="#8b949e" font-size="9" font-family="JetBrains Mono">x4</text>
+      <text x="18" y="202" fill="#8b949e" font-size="9" font-family="JetBrains Mono">x5</text>
+      <!-- Feature 1 column highlighted (batch norm normalizes per-feature across batch) -->
+      <rect x="32" y="45" width="40" height="170" rx="3" fill="rgba(210,153,34,0.25)" stroke="#d29922" stroke-width="1.2"/>
+      <rect x="72" y="45" width="40" height="170" rx="3" fill="rgba(88,166,255,0.08)" stroke="#3a3a37"/>
+      <rect x="112" y="45" width="40" height="170" rx="3" fill="rgba(88,166,255,0.08)" stroke="#3a3a37"/>
+      <rect x="152" y="45" width="40" height="170" rx="3" fill="rgba(88,166,255,0.08)" stroke="#3a3a37"/>
+      <text x="52" y="230" text-anchor="middle" fill="#d29922" font-size="8" font-family="JetBrains Mono">normalize ↑</text>
+      <text x="52" y="242" text-anchor="middle" fill="#d29922" font-size="8" font-family="JetBrains Mono">across batch</text>
+      <text x="52" y="254" text-anchor="middle" fill="#d29922" font-size="8" font-family="JetBrains Mono">per feature</text>
+
+      <!-- LAYER NORM side -->
+      <text x="490" y="22" text-anchor="middle" fill="#3fb950" font-size="12" font-family="JetBrains Mono" font-weight="700">Layer Normalization</text>
+      <text x="382" y="40" fill="#8b949e" font-size="9" font-family="JetBrains Mono" text-anchor="middle">f₁</text>
+      <text x="422" y="40" fill="#8b949e" font-size="9" font-family="JetBrains Mono" text-anchor="middle">f₂</text>
+      <text x="462" y="40" fill="#8b949e" font-size="9" font-family="JetBrains Mono" text-anchor="middle">f₃</text>
+      <text x="502" y="40" fill="#8b949e" font-size="9" font-family="JetBrains Mono" text-anchor="middle">f₄</text>
+      <text x="542" y="40" fill="#8b949e" font-size="9" font-family="JetBrains Mono" text-anchor="middle">f₅</text>
+      <text x="582" y="40" fill="#8b949e" font-size="9" font-family="JetBrains Mono" text-anchor="middle">f₆</text>
+      <text x="348" y="62" fill="#8b949e" font-size="9" font-family="JetBrains Mono">x1</text>
+      <text x="348" y="97" fill="#8b949e" font-size="9" font-family="JetBrains Mono">x2</text>
+      <text x="348" y="132" fill="#8b949e" font-size="9" font-family="JetBrains Mono">x3</text>
+      <text x="348" y="167" fill="#8b949e" font-size="9" font-family="JetBrains Mono">x4</text>
+      <!-- Row 1 highlighted (layer norm normalizes per-sample across all features) -->
+      <rect x="362" y="45" width="240" height="30" rx="3" fill="rgba(63,185,80,0.25)" stroke="#3fb950" stroke-width="1.2"/>
+      <rect x="362" y="78" width="240" height="30" rx="3" fill="rgba(88,166,255,0.06)" stroke="#3a3a37"/>
+      <rect x="362" y="111" width="240" height="30" rx="3" fill="rgba(88,166,255,0.06)" stroke="#3a3a37"/>
+      <rect x="362" y="144" width="240" height="30" rx="3" fill="rgba(88,166,255,0.06)" stroke="#3a3a37"/>
+      <text x="480" y="200" text-anchor="middle" fill="#3fb950" font-size="8" font-family="JetBrains Mono">normalize → across features per sample</text>
+    </svg>
+  </div>
+
+  <div class="sub-h">Comparison Table</div>
+  <table>
+    <tr><th>Property</th><th>Batch Normalization</th><th>Layer Normalization</th></tr>
+    <tr><td class="val">Normalizes across</td><td class="amber">Batch dimension (per feature)</td><td class="green">Feature dimension (per sample)</td></tr>
+    <tr><td class="val">Batch size dependency</td><td class="acc">Yes — unstable with small batches</td><td class="green">No — fully independent</td></tr>
+    <tr><td class="val">Sequence length dep</td><td class="acc">Yes</td><td class="green">No</td></tr>
+    <tr><td class="val">Inference behavior</td><td class="amber">Uses running stats from training</td><td class="green">Computes fresh stats each time</td></tr>
+    <tr><td class="val">Best for</td><td class="blue">CNNs, image tasks</td><td class="green">Transformers, RNNs, GPT, NLP</td></tr>
+    <tr><td class="val">PyTorch class</td><td class="blue">nn.BatchNorm1d / 2d</td><td class="green">nn.LayerNorm</td></tr>
+  </table>
+
+  <div class="hl success"><strong>Rule for Transformers:</strong> Always use LayerNorm. Transformers use variable-length sequences, often small batch sizes, and autoregressive training — all conditions where BatchNorm fails. LayerNorm's per-sample independence is exactly what's needed.</div>
+</section>
+
+<!-- ===== S21: LAYERNORM STEPS ===== -->
+<section class="sec reveal" id="layernorm-steps">
+  <div class="sec-tag">S21 — Layer Normalization Steps &amp; Full Derivation</div>
+  <h2>Layer Normalization: Step-by-Step with Complete Worked Example</h2>
+  <p class="sec-intro">
+    Layer Normalization is a normalization technique applied across the features (channels/dimensions)
+    of each individual sample. This section derives each step from scratch with a complete numerical
+    example using $x = [4.0, 6.0, 10.0, 8.0]$, then shows the learnable scale and shift parameters
+    $\gamma$ and $\beta$.
+  </p>
+
+  <div class="sub-h">The Five Steps of Layer Normalization</div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin:1rem 0">
+    <div class="step on" id="ln-1">
+      <div class="sec-tag">STEP 1 of 5</div>
+      <div class="sub-h" style="margin-top:.4rem">① Input Vector</div>
+      <p style="color:var(--muted);margin-bottom:.8rem">Take the input feature vector for a single training example. Each element $x_i$ is one feature/activation value.</p>
+      <div class="mb">
+        $$\mathbf{x} = [x_1, x_2, \ldots, x_n] \in \mathbb{R}^n$$
+        $$\text{Worked example: } \mathbf{x} = [4.0,\; 6.0,\; 10.0,\; 8.0], \quad n = 4$$
+      </div>
+      <div class="mat-wrap">
+        <div>
+          <div class="mat">
+            <div class="mat-row">
+              <div class="mat-cell hl-cell3">4.0</div>
+              <div class="mat-cell hl-cell4">6.0</div>
+              <div class="mat-cell hl-cell">10.0</div>
+              <div class="mat-cell hl-cell2">8.0</div>
+            </div>
+          </div>
+          <div class="mat-label">Input x — 4 feature values</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step" id="ln-2">
+      <div class="sec-tag">STEP 2 of 5</div>
+      <div class="sub-h" style="margin-top:.4rem">② Compute Mean $\mu$</div>
+      <p style="color:var(--muted);margin-bottom:.8rem">Average all feature values in this single sample. This is the mean across the feature (not batch) dimension.</p>
+      <div class="mb">
+        $$\mu = \frac{1}{n} \sum_{i=1}^{n} x_i = \frac{x_1 + x_2 + \cdots + x_n}{n}$$
+        $$\text{Worked: } \mu = \frac{4.0 + 6.0 + 10.0 + 8.0}{4} = \frac{28.0}{4} = 7.0$$
+      </div>
+      <div class="hl"><strong>Key difference from BatchNorm:</strong> $\mu$ is computed <em>only from this sample's features</em> — not averaged across a batch. For a token vector of dimension 768, you average all 768 values.</div>
+    </div>
+
+    <div class="step" id="ln-3">
+      <div class="sec-tag">STEP 3 of 5</div>
+      <div class="sub-h" style="margin-top:.4rem">③ Compute Variance $\sigma^2$</div>
+      <p style="color:var(--muted);margin-bottom:.8rem">Variance measures how spread out the feature values are around the mean.</p>
+      <div class="mb">
+        $$\sigma^2 = \frac{1}{n} \sum_{i=1}^{n} (x_i - \mu)^2$$
+        $$= \frac{(4.0 - 7.0)^2 + (6.0 - 7.0)^2 + (10.0 - 7.0)^2 + (8.0 - 7.0)^2}{4}$$
+        $$= \frac{(-3.0)^2 + (-1.0)^2 + (3.0)^2 + (1.0)^2}{4}$$
+        $$= \frac{9.0 + 1.0 + 9.0 + 1.0}{4} = \frac{20.0}{4} = 5.0$$
+      </div>
+      <div class="mat-wrap">
+        <div>
+          <div class="mat">
+            <div class="mat-row">
+              <div class="mat-cell hl-cell3">-3.0</div>
+              <div class="mat-cell hl-cell4">-1.0</div>
+              <div class="mat-cell hl-cell">+3.0</div>
+              <div class="mat-cell hl-cell2">+1.0</div>
+            </div>
+          </div>
+          <div class="mat-label">$(x_i - \mu)$ deviations from mean</div>
+        </div>
+        <div class="mat-op">²→</div>
+        <div>
+          <div class="mat">
+            <div class="mat-row">
+              <div class="mat-cell hl-cell3">9.0</div>
+              <div class="mat-cell hl-cell4">1.0</div>
+              <div class="mat-cell hl-cell">9.0</div>
+              <div class="mat-cell hl-cell2">1.0</div>
+            </div>
+          </div>
+          <div class="mat-label">Squared deviations, avg = 5.0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step" id="ln-4">
+      <div class="sec-tag">STEP 4 of 5</div>
+      <div class="sub-h" style="margin-top:.4rem">④ Normalize Each Feature $\hat{x}_i$</div>
+      <p style="color:var(--muted);margin-bottom:.8rem">Subtract the mean and divide by the standard deviation. Adding $\epsilon$ prevents division by zero.</p>
+      <div class="mb">
+        $$\hat{x}_i = \frac{x_i - \mu}{\sqrt{\sigma^2 + \epsilon}}, \quad \epsilon = 10^{-5} = 0.00001$$
+        $$\sqrt{\sigma^2 + \epsilon} = \sqrt{5.0 + 0.00001} \approx \sqrt{5.0} \approx 2.236$$
+        $$\hat{x}_1 = \frac{4.0 - 7.0}{2.236} = \frac{-3.0}{2.236} \approx -1.342$$
+        $$\hat{x}_2 = \frac{6.0 - 7.0}{2.236} = \frac{-1.0}{2.236} \approx -0.447$$
+        $$\hat{x}_3 = \frac{10.0 - 7.0}{2.236} = \frac{3.0}{2.236} \approx +1.342$$
+        $$\hat{x}_4 = \frac{8.0 - 7.0}{2.236} = \frac{1.0}{2.236} \approx +0.447$$
+        $$\hat{\mathbf{x}} = [-1.342,\; -0.447,\; +1.342,\; +0.447]$$
+        $$\text{Verify: mean}(\hat{\mathbf{x}}) \approx 0.000, \quad \text{var}(\hat{\mathbf{x}}) \approx 1.000$$
+      </div>
+      <div class="mat-wrap">
+        <div>
+          <div class="mat">
+            <div class="mat-row">
+              <div class="mat-cell hl-cell3">-1.342</div>
+              <div class="mat-cell hl-cell4">-0.447</div>
+              <div class="mat-cell hl-cell">+1.342</div>
+              <div class="mat-cell hl-cell2">+0.447</div>
+            </div>
+          </div>
+          <div class="mat-label">$\hat{x}$ — zero mean, unit variance</div>
+        </div>
+      </div>
+      <div class="hl success"><strong>Magic of Zero Mean &amp; Unit Variance:</strong> This creates consistent, balanced activation distributions that help the neural network learn faster with more stable training. Used in BatchNorm, LayerNorm, weight initialization, and input scaling.</div>
+    </div>
+
+    <div class="step" id="ln-5">
+      <div class="sec-tag">STEP 5 of 5</div>
+      <div class="sub-h" style="margin-top:.4rem">⑤ Scale &amp; Shift: Learnable $\gamma$ and $\beta$</div>
+      <p style="color:var(--muted);margin-bottom:.8rem">The model learns two vectors $\gamma$ (scale) and $\beta$ (shift) — one value per feature dimension. They allow the network to undo normalization if needed.</p>
+      <div class="mb">
+        $$y_i = \gamma_i \cdot \hat{x}_i + \beta_i$$
+        $$\gamma, \beta \in \mathbb{R}^n \quad \text{(trainable parameters, initialized to } \gamma=1, \beta=0\text{)}$$
+        $$\text{Worked: } \gamma = [1, 1, 1, 1], \quad \beta = [0, 0, 0, 0]$$
+        $$\mathbf{y} = \gamma \odot \hat{\mathbf{x}} + \beta = [1\cdot(-1.342) + 0,\; 1\cdot(-0.447)+0,\; 1\cdot(+1.342)+0,\; 1\cdot(+0.447)+0]$$
+        $$\mathbf{y} = [-1.342,\; -0.447,\; +1.342,\; +0.447]$$
+        $$\text{(With default init } \gamma=1, \beta=0: \text{ output equals } \hat{\mathbf{x}})$$
+      </div>
+      <div class="hl warn"><strong>Why $\gamma$ and $\beta$?</strong> Pure normalization forces all features to have mean 0 and variance 1, which may not be optimal for every layer. $\gamma$ and $\beta$ give the model freedom to re-scale and re-shift the normalized output to any distribution it needs. They are learned via backpropagation.</div>
+    </div>
+
+    <div class="step-ctrl">
+      <button class="btn" onclick="stepNav('ln',1,5,-1)">← Prev</button>
+      <span class="step-idx" id="ln-idx">Step 1 of 5</span>
+      <button class="btn" onclick="stepNav('ln',1,5,1)">Next →</button>
+    </div>
+  </div>
+
+  <div class="sub-h">Complete LayerNorm Formula Summary</div>
+  <div class="mb">
+    $$\boxed{\text{LayerNorm}(\mathbf{x}) = \gamma \odot \frac{\mathbf{x} - \mu}{\sqrt{\sigma^2 + \epsilon}} + \beta}$$
+    $$\mu = \frac{1}{n}\sum_{i=1}^n x_i, \quad \sigma^2 = \frac{1}{n}\sum_{i=1}^n (x_i - \mu)^2$$
+    $$\gamma, \beta \in \mathbb{R}^n \text{ (learnable)}, \quad \epsilon = 10^{-5} \text{ (numerical stability)}$$
+    $$\text{Output: zero mean, unit variance, then re-scaled by } \gamma, \text{shifted by } \beta$$
+  </div>
+
+  <div class="sub-h">Full Worked Example Summary</div>
+  <table>
+    <tr><th>Step</th><th>Operation</th><th>Result</th></tr>
+    <tr><td class="val">Input</td><td>$\mathbf{x}$</td><td class="blue">[4.0, 6.0, 10.0, 8.0]</td></tr>
+    <tr><td class="val">Mean</td><td>$\mu = \sum x_i / n$</td><td class="amber">7.0</td></tr>
+    <tr><td class="val">Variance</td><td>$\sigma^2 = \sum(x_i-\mu)^2/n$</td><td class="amber">5.0</td></tr>
+    <tr><td class="val">Std dev</td><td>$\sqrt{\sigma^2 + \epsilon}$</td><td class="amber">≈ 2.236</td></tr>
+    <tr><td class="val">Normalized $\hat{x}$</td><td>$(x_i - \mu)/\text{std}$</td><td class="green">[-1.342, -0.447, +1.342, +0.447]</td></tr>
+    <tr><td class="val">Scale $\gamma$</td><td>learnable, init=1</td><td class="green">[1, 1, 1, 1]</td></tr>
+    <tr><td class="val">Shift $\beta$</td><td>learnable, init=0</td><td class="green">[0, 0, 0, 0]</td></tr>
+    <tr><td class="val">Output $y$</td><td>$\gamma \hat{x} + \beta$</td><td class="acc">[-1.342, -0.447, +1.342, +0.447]</td></tr>
+  </table>
+
+  <div class="hl success"><strong>Key Insight:</strong> With default initialization ($\gamma=1, \beta=0$), LayerNorm outputs pure $\hat{x}$ — zero mean, unit variance. During training, the model adjusts $\gamma$ and $\beta$ to find the best distribution for each layer. This is why LayerNorm both stabilizes and preserves expressive power.</div>
+</section>
+
+<!-- ===== S22: LAYERNORM PYTORCH ===== -->
+<section class="sec reveal" id="layernorm-pytorch">
+  <div class="sec-tag">S22 — Layer Normalization in PyTorch</div>
+  <h2>Implementing LayerNorm from Scratch &amp; Using nn.LayerNorm</h2>
+  <p class="sec-intro">
+    We implement Layer Normalization both from scratch (to see the math in code) and using PyTorch's
+    built-in <code>nn.LayerNorm</code>. We also verify they produce identical outputs. Then we show
+    where LayerNorm plugs into the full transformer block with a single-sample forward pass verification.
+  </p>
+
+  <div class="sub-h">LayerNorm From Scratch — Full Implementation</div>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — LayerNorm from scratch, matches nn.LayerNorm exactly</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+<span class="kw">class</span> <span class="cl">LayerNorm</span>(nn.<span class="cl">Module</span>):
+    <span class="cm">"""
+    concept: layer normalization — normalize across features per sample.
+    normalized_shape: tuple or int = number of feature dims to normalize
+    gamma (scale): learnable weight, init=1, shape [normalized_shape]
+    beta  (shift): learnable bias,  init=0, shape [normalized_shape]
+    eps   : small constant (1e-5) prevents division by zero
+    Precondition: x.shape[-len(normalized_shape):] == normalized_shape
+    Time: O(n) per sample | Space: O(n) for gamma, beta
+    dry run: x=[4,6,10,8] → mu=7.0 → var=5.0 → std=2.236
+             → xhat=[-1.34,-0.45,+1.34,+0.45] → y=gamma*xhat+beta
+    """</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="id2">self</span>, normalized_shape, eps=<span class="nu">1e-5</span>):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="id2">self</span>.eps   = eps
+        <span class="cm"># Learnable scale (gamma): init ones,  shape = [normalized_shape]</span>
+        <span class="id2">self</span>.gamma = nn.<span class="cl">Parameter</span>(torch.<span class="fn">ones</span>(normalized_shape))
+        <span class="cm"># Learnable shift (beta): init zeros, shape = [normalized_shape]</span>
+        <span class="id2">self</span>.beta  = nn.<span class="cl">Parameter</span>(torch.<span class="fn">zeros</span>(normalized_shape))
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="id2">self</span>, x):
+        <span class="cm"># Step 1: compute mean across last dim (feature axis) per sample</span>
+        mu = x.<span class="fn">mean</span>(dim=<span class="nu">-1</span>, keepdim=<span class="kw">True</span>)       <span class="cm"># [..., 1] — one mean per sample</span>
+
+        <span class="cm"># Step 2: compute variance across last dim</span>
+        var = x.<span class="fn">var</span>(dim=<span class="nu">-1</span>, keepdim=<span class="kw">True</span>, unbiased=<span class="kw">False</span>)  <span class="cm"># [..., 1]</span>
+
+        <span class="cm"># Step 3: normalize — zero mean, unit variance</span>
+        x_hat = (x - mu) / torch.<span class="fn">sqrt</span>(var + <span class="id2">self</span>.eps)   <span class="cm"># [..., n]</span>
+
+        <span class="cm"># Step 4: scale and shift with learned gamma, beta</span>
+        y = <span class="id2">self</span>.gamma * x_hat + <span class="id2">self</span>.beta               <span class="cm"># [..., n]</span>
+        <span class="kw">return</span> y
+
+<span class="cm"># --- Verification with worked example ---</span>
+x = torch.<span class="fn">tensor</span>([[<span class="nu">4.0</span>, <span class="nu">6.0</span>, <span class="nu">10.0</span>, <span class="nu">8.0</span>]])  <span class="cm"># [1, 4]</span>
+
+<span class="cm"># Custom LayerNorm</span>
+custom_ln = <span class="cl">LayerNorm</span>(normalized_shape=<span class="nu">4</span>)
+y_custom = custom_ln(x)
+<span class="fn">print</span>(<span class="st">"custom output:"</span>, y_custom)
+<span class="cm"># tensor([[-1.3416, -0.4472,  1.3416,  0.4472]])</span>
+
+<span class="cm"># PyTorch built-in</span>
+builtin_ln = nn.<span class="cl">LayerNorm</span>(<span class="nu">4</span>)
+y_builtin = builtin_ln(x)
+<span class="fn">print</span>(<span class="st">"builtin output:"</span>, y_builtin)
+<span class="cm"># tensor([[-1.3416, -0.4472,  1.3416,  0.4472]])</span>
+
+<span class="cm"># Verify identical</span>
+<span class="fn">print</span>(<span class="st">"max diff:"</span>, (y_custom - y_builtin).<span class="fn">abs</span>().<span class="fn">max</span>().<span class="fn">item</span>())  <span class="cm"># ~0.0</span>
+
+<span class="cm"># Verify zero mean, unit variance
+print("mean after norm:", y_custom.mean().item())   # ~0.0
+print("var  after norm:", y_custom.var().item())    # ~1.0</span></pre>
+  </div>
+
+  <div class="sub-h">LayerNorm with Batch of Sequences (GPT-style)</div>
+  <p style="color:var(--muted);margin-bottom:.8rem">
+    In a GPT model, input to LayerNorm is shape $[b, T, d_{\text{model}}]$. Normalization happens
+    independently for each of the $b \times T$ token vectors across the $d_{\text{model}}$ dimension.
+  </p>
+  <div class="mb">
+    $$X \in \mathbb{R}^{b \times T \times d_{\text{model}}}, \quad \text{nn.LayerNorm}(d_{\text{model}})$$
+    $$\text{For each token at position }(b_i, t_j):\text{ compute }\mu_{b_i,t_j}, \sigma^2_{b_i,t_j}\text{ across }d_{\text{model}}\text{ features}$$
+    $$\text{Total normalization operations: } b \times T \text{ (one per token vector)}$$
+    $$\gamma, \beta \in \mathbb{R}^{d_{\text{model}}} = \mathbb{R}^{768} \text{ (same for all batch/seq positions)}$$
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — LayerNorm for batched token sequences [b, T, d]</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+<span class="cm"># concept: LayerNorm applied to token embeddings in a transformer block
+# x      : batched token embeddings [batch, seq_len, d_model]
+# ln     : normalizes last dim (d_model) per token independently
+# gamma  : scale param [d_model] — shared across all batch/seq positions
+# beta   : shift param [d_model] — shared across all batch/seq positions
+# Precondition: x.shape[-1] == d_model == 768 for GPT-2
+# Time: O(b*T*d) | Space: O(d) for gamma, beta
+# dry run: x[2,5,768] → mu[2,5,1] → var[2,5,1] → xhat[2,5,768] → y[2,5,768]</span>
+
+torch.<span class="fn">manual_seed</span>(<span class="nu">42</span>)
+batch, T, d_model = <span class="nu">2</span>, <span class="nu">5</span>, <span class="nu">768</span>
+
+x = torch.<span class="fn">randn</span>(batch, T, d_model)  <span class="cm"># [2, 5, 768] — raw token embeddings</span>
+ln = nn.<span class="cl">LayerNorm</span>(d_model)           <span class="cm"># normalizes last dim</span>
+
+y = ln(x)                              <span class="cm"># [2, 5, 768]</span>
+
+<span class="cm"># Check: each token vector should have mean≈0, var≈1 after norm</span>
+<span class="cm"># (before gamma/beta re-scaling, but default gamma=1,beta=0 so output=xhat)</span>
+<span class="fn">print</span>(<span class="st">"input  shape:"</span>, x.shape)   <span class="cm"># [2, 5, 768]</span>
+<span class="fn">print</span>(<span class="st">"output shape:"</span>, y.shape)   <span class="cm"># [2, 5, 768] — shape preserved</span>
+<span class="fn">print</span>(<span class="st">"token[0,0] mean after LN:"</span>, y[<span class="nu">0</span>, <span class="nu">0</span>].<span class="fn">mean</span>().<span class="fn">item</span>())   <span class="cm"># ~0.0</span>
+<span class="fn">print</span>(<span class="st">"token[0,0] var  after LN:"</span>, y[<span class="nu">0</span>, <span class="nu">0</span>].<span class="fn">var</span>().<span class="fn">item</span>())    <span class="cm"># ~1.0</span>
+<span class="fn">print</span>(<span class="st">"gamma shape:"</span>, ln.weight.shape)  <span class="cm"># [768]</span>
+<span class="fn">print</span>(<span class="st">"beta  shape:"</span>, ln.bias.shape)    <span class="cm"># [768]</span>
+<span class="fn">print</span>(<span class="st">"total LN params:"</span>, <span class="nu">768</span>*<span class="nu">2</span>)       <span class="cm"># 1536 (gamma + beta)</span></pre>
+  </div>
+
+  <div class="sub-h">Where LayerNorm Appears in the Transformer (GPT-2 Pre-Norm)</div>
+  <div class="pipeline">
+    <div class="pipe-box accent">Input x</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">LayerNorm 1</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box amber">Multi-Head Attn</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box">+ Residual</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box blue">LayerNorm 2</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Feed Forward</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box">+ Residual</div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box green">Output z</div>
+  </div>
+  <p style="color:var(--muted);font-size:.88rem;margin-top:.4rem">
+    LayerNorm is applied <strong>before</strong> each sub-layer (pre-norm). After the final transformer block,
+    a third LayerNorm is applied before the output projection head. The <code>nn.LayerNorm(d_model)</code>
+    call always normalizes the last dimension (feature dimension).
+  </p>
+
+  <div class="sub-h">Numerical Stability: Why $\epsilon$?</div>
+  <div class="callout amber" data-label="Epsilon Explained">
+    <p>When all feature values in a sample are identical (e.g. $x=[5.0, 5.0, 5.0, 5.0]$), the variance
+    $\sigma^2 = 0$. Without $\epsilon$, we'd divide by $\sqrt{0} = 0$ — producing NaN/Inf gradients
+    and crashing training. Adding $\epsilon = 10^{-5}$ ensures the denominator is always at least
+    $\sqrt{0.00001} = 0.00316$, a safe lower bound.</p>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Python — Single training forward pass through one GPT block with LayerNorm</span>
+      <button class="code-copy" onclick="copyCode(this)">copy</button>
+    </div>
+    <pre><span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+
+<span class="cm"># concept: pre-norm transformer block — LayerNorm before each sub-layer
+# x: input token embeddings [b, T, d]
+# norm1, norm2: two LayerNorm instances, normalize last dim (d)
+# Each sub-layer is wrapped: output = x + sublayer(norm(x))  (residual)
+# Precondition: d_model divisible by n_heads
+# Time: O(T^2*d) | Space: O(T*d)</span>
+
+d_model = <span class="nu">768</span>
+
+<span class="cm"># Minimal pre-norm forward pass (illustrates exact position of LN)</span>
+<span class="kw">class</span> <span class="cl">PreNormBlock</span>(nn.<span class="cl">Module</span>):
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="id2">self</span>, d):
+        <span class="fn">super</span>().<span class="fn">__init__</span>()
+        <span class="id2">self</span>.norm1 = nn.<span class="cl">LayerNorm</span>(d)   <span class="cm"># before attention</span>
+        <span class="id2">self</span>.norm2 = nn.<span class="cl">LayerNorm</span>(d)   <span class="cm"># before FFN</span>
+        <span class="cm"># placeholder sub-layers (use Identity for shape check)</span>
+        <span class="id2">self</span>.attn = nn.<span class="cl">Identity</span>()
+        <span class="id2">self</span>.ffn  = nn.<span class="cl">Identity</span>()
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="id2">self</span>, x):
+        <span class="cm"># Pre-norm + residual for attention</span>
+        x = x + <span class="id2">self</span>.<span class="fn">attn</span>(<span class="id2">self</span>.<span class="fn">norm1</span>(x))   <span class="cm"># [b,T,d]</span>
+        <span class="cm"># Pre-norm + residual for FFN</span>
+        x = x + <span class="id2">self</span>.<span class="fn">ffn</span>(<span class="id2">self</span>.<span class="fn">norm2</span>(x))    <span class="cm"># [b,T,d]</span>
+        <span class="kw">return</span> x
+
+<span class="cm"># Quick shape test with 4 tokens from "every effort moves you"</span>
+block = <span class="cl">PreNormBlock</span>(d_model)
+x_harsha = torch.<span class="fn">randn</span>(<span class="nu">1</span>, <span class="nu">4</span>, d_model)  <span class="cm"># [batch=1, T=4, d=768]</span>
+out = block(x_harsha)
+<span class="fn">print</span>(<span class="st">"input  shape:"</span>, x_harsha.shape)   <span class="cm"># [1, 4, 768]</span>
+<span class="fn">print</span>(<span class="st">"output shape:"</span>, out.shape)        <span class="cm"># [1, 4, 768] — shape PRESERVED</span>
+<span class="fn">print</span>(<span class="st">"LN params per block:"</span>, <span class="fn">sum</span>(p.<span class="fn">numel</span>() <span class="kw">for</span> p <span class="kw">in</span> block.<span class="fn">parameters</span>()))
+<span class="cm"># 768*2 + 768*2 = 3072 params (two LayerNorms each with gamma+beta)</span></pre>
+  </div>
+
+  <div class="hl success"><strong>Production Usage:</strong> In GPT-2, <code>nn.LayerNorm(768)</code> is instantiated <em>twice per transformer block</em> (before attention and before FFN) and once more before the final output head. Total LayerNorm parameters: $(12 \times 2 + 1) \times 768 \times 2 = 25 \times 1536 = 38{,}400$ — tiny relative to the 124M total.</div>
+</section>
+
+<!-- ===== S23: SUMMARY ===== -->
+<section class="sec reveal" id="summary">
+  <div class="sec-tag">S23 — Summary</div>
+  <h2>Summary — LLM Architecture &amp; Layer Normalization</h2>
+  <p class="sec-intro">
+    Bringing together all topics from S17–S22: the high-level GPT architecture, the 124M parameter
+    configuration, and the complete theory, mathematics, and implementation of Layer Normalization.
+  </p>
+
+  <div class="sub-h">Complete Topic Reference</div>
+  <table>
+    <tr><th>Section</th><th>Topic</th><th>Key Formula / Concept</th></tr>
+    <tr><td class="val">S17</td><td class="blue">LLM Architecture</td><td>Transformer block: LayerNorm → Attn → Drop → +Residual → LayerNorm → FFN → Drop → +Residual</td></tr>
+    <tr><td class="val">S18</td><td class="amber">GPT Config 124M</td><td>vocab=50K, ctx=1024, d=768, heads=12, layers=12, head_dim=64</td></tr>
+    <tr><td class="val">S19</td><td class="blue">LayerNorm Theory</td><td>Vanishing/exploding gradients → internal covariate shift → stabilize with LN</td></tr>
+    <tr><td class="val">S20</td><td class="green">Batch vs Layer Norm</td><td>BatchNorm: across batch per feature. LayerNorm: across features per sample.</td></tr>
+    <tr><td class="val">S21</td><td class="green">LayerNorm Steps</td><td>$\hat{x}_i = (x_i-\mu)/\sqrt{\sigma^2+\epsilon}$, then $y_i = \gamma\hat{x}_i+\beta$</td></tr>
+    <tr><td class="val">S22</td><td class="acc">LayerNorm PyTorch</td><td><code>nn.LayerNorm(d_model)</code>, pre-norm: <code>x = x + sublayer(norm(x))</code></td></tr>
+  </table>
+
+  <div class="sub-h">Key Formulas at a Glance</div>
+  <div class="mb">
+    $$\boxed{\text{Transformer Block:}\quad \mathbf{z} = \mathbf{x} + \text{FFN}(\text{LN}_2(\mathbf{x} + \text{Attn}(\text{LN}_1(\mathbf{x}))))}$$
+    $$\boxed{\text{LayerNorm:}\quad y_i = \gamma_i \cdot \frac{x_i - \mu}{\sqrt{\sigma^2+\epsilon}} + \beta_i}$$
+    $$\mu = \frac{1}{n}\sum_{i=1}^n x_i, \quad \sigma^2 = \frac{1}{n}\sum_{i=1}^n(x_i-\mu)^2$$
+    $$\text{GPT-2 head\_dim:}\quad d_k = \frac{768}{12} = 64, \quad \frac{1}{\sqrt{d_k}} = 0.125$$
+    $$\text{FFN expansion:}\quad 768 \xrightarrow{\text{Linear}} 3072 \xrightarrow{\text{GELU}} 3072 \xrightarrow{\text{Linear}} 768$$
+  </div>
+
+  <div class="sub-h">Topics Covered</div>
+  <div class="hero-tags" style="justify-content:flex-start;margin:1rem 0">
+    <span class="tag red">Transformer Block</span>
+    <span class="tag amber">GPT-2 Config 124M</span>
+    <span class="tag">Shortcut Connections</span>
+    <span class="tag green">Layer Normalization</span>
+    <span class="tag">Batch Normalization</span>
+    <span class="tag amber">Internal Covariate Shift</span>
+    <span class="tag green">Vanishing Gradients</span>
+    <span class="tag">GELU Activation</span>
+    <span class="tag green">Pre-Norm Style</span>
+    <span class="tag">γ and β Parameters</span>
+    <span class="tag amber">Feed Forward Network</span>
+    <span class="tag">PyTorch nn.LayerNorm</span>
+    <span class="tag red">50,257 vocab</span>
+    <span class="tag">1024 context window</span>
+  </div>
+
+  <div class="hl success"><strong>Final Takeaway:</strong> A GPT-style transformer block = two sub-layers (attention + FFN), each preceded by a <strong>LayerNorm</strong> and followed by a <strong>residual connection</strong>. LayerNorm normalizes each token's 768-dim vector to zero mean and unit variance, then re-scales with learned $\gamma, \beta$. This is why deep stacks of 12 blocks can train stably — gradients flow cleanly through both the residual path and the normalized sub-layer path simultaneously.</div>
+</section>
+
+<script>
+let sidebarOpen = true;
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  document.getElementById('sidebar').classList.toggle('open', sidebarOpen);
+  document.body.classList.toggle('sidebar-open', sidebarOpen);
+  document.getElementById('sb-btn').innerHTML = sidebarOpen ? '&#8249;&#8249;' : '&#8250;&#8250;';
+}
+window.addEventListener('scroll', () => {
+  const el = document.documentElement;
+  const pct = (el.scrollTop / (el.scrollHeight - el.clientHeight)) * 100;
+  document.getElementById('prog').style.width = pct + '%';
+});
+const sections = document.querySelectorAll('section[id]');
+const topLinks = document.querySelectorAll('.nav-scrolllinks a');
+const sbLinks  = document.querySelectorAll('.sb-link');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const href = '#' + e.target.id;
+      topLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === href));
+      sbLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === href));
+    }
+  });
+}, { threshold: 0.25 });
+sections.forEach(s => obs.observe(s));
+document.querySelectorAll('.reveal').forEach(el =>
+  new IntersectionObserver(([e]) => e.isIntersecting && e.target.classList.add('show'),
+    { threshold: 0.06 }).observe(el)
+);
+const stepState = {};
+function stepNav(id, min, max, dir) {
+  if (stepState[id] === undefined) stepState[id] = min;
+  document.getElementById(id + '-' + stepState[id]).classList.remove('on');
+  stepState[id] = Math.min(max, Math.max(min, stepState[id] + dir));
+  document.getElementById(id + '-' + stepState[id]).classList.add('on');
+  document.getElementById(id + '-idx').textContent = 'Step ' + stepState[id] + ' of ' + max;
+}
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 1800);
+  });
+}
+</script>
+</body>
+</html>
